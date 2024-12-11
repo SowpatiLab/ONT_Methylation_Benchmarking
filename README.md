@@ -12,8 +12,27 @@ This folder contains all the code that was required to convert variout modkit/bi
 ### Plotting scripts
 These are the code snippets that show how the plots used in the preprint were generated.
 
+## Tools benchmarked:
+|sr| Tool     | Model            | 
+|--|----------|------------------|
+| 1| Dorado   | 4kHz_v4          |
+| 2| Dorado   | 5kHz_v4          |
+| 3| Dorado   | 5kHz_v5          |
+| 4| DeepMod2 | 4kHz_Transformer |
+| 5| DeepMod2 | 4kHz_BiLSTM      |
+| 6| DeepMod2 | 5kHz_Transformer |
+| 7| DeepMod2 | 5kHz_BiLSTM      |
+
+## Datasets Benchmarked
+|sr|Organism|
+|--|--------|
+|1 | Human  HG002 |
+|2 | <i>Escherichia coli</i> str. K-12 substr. MG1655 |
+|3 | <i>Helicobacter pylori</i> str. 26695 |
+
+
 ## Contact
 In case of any queries/suggestions, contact
 
-Onkar Kulkarni - onkar {at} ccmb {dot} res {dot} in <br>
-Divya Tej Sowpati - tej {at} ccmb {dot} res {dot} in
+Onkar Kulkarni - onkar@ccmb.res.in <br>
+Divya Tej Sowpati - tej@ccmb.res.in
