@@ -13,26 +13,26 @@ This folder contains all the code that was required to convert variout modkit/bi
 These are the code snippets that show how the plots used in the preprint were generated.
 
 ## Tools benchmarked:
-|sr| Tool     | Model            | 
-|--|----------|------------------|
-| 1| Dorado   | 4kHz_v4          |
-| 2| Dorado   | 5kHz_v4          |
-| 3| Dorado   | 5kHz_v5          |
-| 4| DeepMod2 | 4kHz_Transformer |
-| 5| DeepMod2 | 4kHz_BiLSTM      |
-| 6| DeepMod2 | 5kHz_Transformer |
-| 7| DeepMod2 | 5kHz_BiLSTM      |
+|sr| Tool     | Model            | mods profiled | 
+|--|----------|------------------|---------------|
+| 1| Dorado   | 4kHz_v4          | 5mC, 6mA      |
+| 2| Dorado   | 5kHz_v4          | 5mC, 6mA, 4mC |
+| 3| Dorado   | 5kHz_v5          | 5mC, 6mA, 4mC |
+| 4| DeepMod2 | 4kHz_Transformer | 5mC           |
+| 5| DeepMod2 | 4kHz_BiLSTM      | 5mC           |
+| 6| DeepMod2 | 5kHz_Transformer | 5mC           |
+| 7| DeepMod2 | 5kHz_BiLSTM      | 5mC           |
 
 ## Datasets Benchmarked
-|sr|Organism|
-|--|--------|
-|1 | Human  HG002 |
-|2 | <i>Escherichia coli</i> str. K-12 substr. MG1655 |
-|3 | <i>Helicobacter pylori</i> str. 26695 |
+|sr|Organism| Treatment |
+|--|--------|-----------|
+|1 | Human  HG002 | Native |
+|2 | <i>Escherichia coli</i> str. K-12 substr. MG1655 | Native (WT) <br/> Double Mutant (DM)  <br/>  Double Mutant M.SssI Treated (DM_M.SssI) <br/>  Double Mutant M.CviP Treated (DM_M.CvIP)
+|3 | <i>Helicobacter pylori</i> str. 26695 | Native (WT) <br/> Whole Genome Amplified (WGA)
 
 
 ## Contact
 In case of any queries/suggestions, contact
 
-Onkar Kulkarni - onkar@ccmb.res.in <br>
-Divya Tej Sowpati - tej@ccmb.res.in
+Onkar Kulkarni - onkar {at} ccmb {dot} res {dot} in <br>
+Divya Tej Sowpati - tej {at} ccmb {dot} res {dot} in
