@@ -1,0 +1,11 @@
+exps: ['osjaponica']
+acc: ['sup', 'hac']
+
+
+pod5_dir: "pod5"
+
+is_bacterial: false
+
+run_mods:
+  5mC:  ['v4r1', 'v5r1', 'v5r3']
+  5mCG: ['v4r1', 'v5r1', 'v5r3']
