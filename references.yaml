@@ -1,0 +1,21 @@
+references:
+    Ecoli:    references/E.coli_MG1655.fa
+    HP26695:  references/H.pylori_26695.fa
+    HPJ99:    references/H.pylori_J99_ATCC700824.fa
+    Nostoc:   references/Nostoc_sp_PCC7120_ATCC27893.fa
+    Tdenticola:  references/Treponema_denticola_ATCC35405.fa
+    HG002:   references/hg38.fa
+    osjaponica: references/GCF_034140825.1_ASM3414082v1_genomic.fa
+    arabidopsis: references/arabidopsis_thaliana.fa
+    mouse:   references/mm39.fa
+
+std_chroms:
+    HG002: [chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22]
+    mouse: [chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19]
+    osjaponica: [NC_089035.1,NC_089036.1,NC_089037.1,NC_089038.1,NC_089039.1,NC_089040.1,NC_089041.1,NC_089042.1,NC_089043.1,NC_089044.1,NC_089045.1,NC_089046.1]
+    arabidopsis: [NC_003070.9,NC_003071.7,NC_003074.8,NC_003075.7,NC_003076.8]
+    Ecoli: ['NC_000913.3']
+    HP26695: ['NC_018939.1']
+    HPJ99: ['NZ_CP011330.1']
+    Nostoc: ['NC_003272.1']
+    Tdenticola: ['NC_002967.9']

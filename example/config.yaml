@@ -1,0 +1,82 @@
+tooling_dir: tooling
+
+pod5_dir: pod5
+
+exps: [HPJ99_NAT]
+runs: []
+acc:  [sup,hac]
+
+dorado_mods:
+  5mC:  [v4r1, v5r1, v5r3, v5.2r2]
+  5mCG: [v4r1, v5r1, v5r3, v5.2r2]
+  6mA:  [v4r1, v4r2, v5r1, v5r3, v5.2r1]
+  4mC:  [v4r1, v5r1, v5r3, v5.2r1]
+
+rockfish_run:             [v5r3]
+deepmod2_transformer_run: [v5r3]
+deepmod2_bilstm_run:      [v5r3]
+f5c_run:                  [v5r3]
+f5c_stranded_run:         [v5r3]
+deepbam_run:              [v5r3]
+deepplnat_run:            [v5r3]
+
+# TOOLING CONFIG
+# ----------------------------------------------------------------------
+# models:
+RERIO_MODELS: /data1/tools/rerio/dorado_models
+DORADO_MODELS: /data1/tools/doradomodels
+
+tooling:
+  bedtools: bedtools
+  samtools: samtools
+  modkit:   /data1/tools/modkit/modkit
+  dorado:
+    dorado-v0.5.3: /data1/tools/dorado/dorado053
+    dorado-v0.9.1: /data1/tools/dorado/dorado091
+    dorado-v1.0.0: /data1/tools/dorado/dorado100
+    dorado-v1.1.1: /data1/tools/dorado/dorado111
+  deepmod2: 
+    install: deepmod2
+    execut: deepmod2
+    conda: deepmod2_test
+    cuda: 12.8
+  rockfish: 
+    install: rockfish
+    model: /data1/tools/rockfishmodels/rf_5kHz.ckpt
+    conda: rockfish_test
+  f5c:
+    install: f5c-v1.5
+    execut:  f5c_x86_64_linux_cuda
+    version: 1.5
+  deepplant: 
+    install: /data1/tools/DeepPlant
+    execut:  /data1/tools/DeepPlant/build/DeepPlant
+    model:   /data1/tools/DeepPlant/model/bilstm/
+    conda:   deepplant
+  deepbam: 
+    install: /data1/tools/DeepBAM
+    execut:  /data1/tools/DeepBAM/cpp/build/DeepBAM
+    model:   /data1/tools/DeepBAM/traced_script_module/LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt
+    conda:   DeepBAM
+
+dorado_config:
+  4kHz_v4r1:   dorado-v0.5.3
+  4kHz_v4r2:   dorado-v0.5.3
+  5kHz_v4r1:   dorado-v0.9.1
+  5kHz_v4r2:   dorado-v0.9.1
+  5kHz_v5r1:   dorado-v0.9.1
+  5kHz_v5r2:   dorado-v0.9.1
+  5kHz_v5r3:   dorado-v0.9.1
+  5kHz_v5.2r1: dorado-v1.1.1
+  5kHz_v5.2r2: dorado-v1.1.1
+
+version_model_lookup:
+  4kHz: [v4r2]
+  5kHz: [v4r1, v4r2, v5r1, v5r2, v5r3, v5.2r1, v5.2r2]
+
+CONDA_ENVS:
+  rockfish: rockfish_test
+
+## LOG 
+timit: True
+logit: True

@@ -1,0 +1,5 @@
+references:
+    HPJ99:    references/H.pylori_J99_ATCC700824.fa
+
+std_chroms:
+    HPJ99: ['NZ_CP011330.1']
