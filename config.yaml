@@ -12,13 +12,13 @@ dorado_mods:
   6mA:  [v4r1, v4r2, v5r1, v5r3, v5.2r1]
   4mC:  [v4r1, v5r1, v5r3, v5.2r1]
 
-rockfish_run:             []
+rockfish_run:             [v5r3]
 deepmod2_transformer_run: [v5r3]
 deepmod2_bilstm_run:      [v5r3]
-f5c_run:                  []
-f5c_stranded_run:         []
-deepbam_run:              []
-deepplnat_run:             []
+f5c_run:                  [v5r3]
+f5c_stranded_run:         [v5r3]
+deepbam_run:              [v5r3]
+deepplnat_run:            [v5r3]
 
 # TOOLING CONFIG
 # ----------------------------------------------------------------------
