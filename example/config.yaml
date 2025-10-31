@@ -2,7 +2,7 @@ tooling_dir: tooling
 
 pod5_dir: pod5
 
-exps: [HPJ99_NAT]
+exps: [HPJ99_WT]
 runs: []
 acc:  [sup,hac]
 

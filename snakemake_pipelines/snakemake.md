@@ -28,6 +28,7 @@ The appropriate references files have to be downloaded. The [references.yaml](..
 
 ### setting up the config file
 
+#### selecting tools to run and their sorresponding models:
 The config file contains the controls to which tools need to be run and where the install directories to each tool resides. This can be modified if you have already installed any of the aforementioned tools.
 
 <pre>
@@ -53,6 +54,31 @@ In this example:
     and for dorado:
         v4r1, v5r1, v5r3, v5.2r2 would be run individually for 5mCG
         whicl 5mC, 4mC and 6mA would not be run.
+
+#### Selecting which samples to run:
+Once the pod5 files are in the designated folder (mentioned in config.yaml), the "exps" key (on line 5) can be used to control which samples to be run.
+    eg: 
+        pod5 folder strurture:
+            .
+            ├── Anabaena_WT_5kHz
+            ├── Ecoli_DM_5kHz
+            ├── Ecoli_DM_MSssI_5kHz
+            ├── Ecoli_WT_5kHz
+            ├── HP26695_WGA_5kHz
+            ├── HP26695_WT_5kHz
+            ├── HPJ99_WT_5kHz
+            └── Tdenticola_WT_5kHz
+        
+        for this setup, to run all the samples, the exps value has to be populated like so:
+            
+            exps: [Anabaena_WT,Ecoli_DM, Ecoli_DM_MSssI, Ecoli_WT, HP26695_WGA, HP26695_WT, HPJ99_WT, Tdenticola_WT]
+
+            These are the names of the pod5 folders excluding the '_5kHz' part.
+            To limit the number of samples run, you can remove the values that you dont want to be processed from the list.
+
+            exps: [Ecoli_DM, Ecoli_WT]
+            here only Ecoli_DM and Ecoli_WT will be processed.
+
 
 ## Running the Snakemake workflow
 
