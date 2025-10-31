@@ -23,18 +23,18 @@ deepplnat_run:            [v5r3]
 # TOOLING CONFIG
 # ----------------------------------------------------------------------
 # models:
-RERIO_MODELS: /data1/tools/rerio/dorado_models
-DORADO_MODELS: /data1/tools/doradomodels
+RERIO_MODELS: tooling/rerio/dorado_models
+DORADO_MODELS: tooling/doradomodels
 
 tooling:
   bedtools: bedtools
   samtools: samtools
-  modkit:   /data1/tools/modkit/modkit
+  modkit:   tooling/modkit/modkit
   dorado:
-    dorado-v0.5.3: /data1/tools/dorado/dorado053
-    dorado-v0.9.1: /data1/tools/dorado/dorado091
-    dorado-v1.0.0: /data1/tools/dorado/dorado100
-    dorado-v1.1.1: /data1/tools/dorado/dorado111
+    dorado-v0.5.3: tooling/dorado/dorado053
+    dorado-v0.9.1: tooling/dorado/dorado091
+    dorado-v1.0.0: tooling/dorado/dorado100
+    dorado-v1.1.1: tooling/dorado/dorado111
   deepmod2: 
     install: deepmod2
     execut: deepmod2
@@ -42,21 +42,21 @@ tooling:
     cuda: 12.8
   rockfish: 
     install: rockfish
-    model: /data1/tools/rockfishmodels/rf_5kHz.ckpt
+    model: tooling/rockfishmodels/rf_5kHz.ckpt
     conda: rockfish_test
   f5c:
     install: f5c-v1.5
     execut:  f5c_x86_64_linux_cuda
     version: 1.5
   deepplant: 
-    install: /data1/tools/DeepPlant
-    execut:  /data1/tools/DeepPlant/build/DeepPlant
-    model:   /data1/tools/DeepPlant/model/bilstm/
+    install: tooling/DeepPlant
+    execut:  tooling/DeepPlant/build/DeepPlant
+    model:   tooling/DeepPlant/model/bilstm/
     conda:   deepplant
   deepbam: 
-    install: /data1/tools/DeepBAM
-    execut:  /data1/tools/DeepBAM/cpp/build/DeepBAM
-    model:   /data1/tools/DeepBAM/traced_script_module/LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt
+    install: tooling/DeepBAM
+    execut:  tooling/DeepBAM/cpp/build/DeepBAM
+    model:   tooling/DeepBAM/traced_script_module/LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt
     conda:   DeepBAM
 
 dorado_config:
