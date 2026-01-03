@@ -1,7 +1,7 @@
 tooling_dir: tooling
 
-pod5_dir: datasets/pod5
-
+pod5_dir:  datasets/pod5
+blow5_dir: datasets/blow5
 exps: [Ecoli_WT, Ecoli_DM, Ecoli_DM_MSssI , HP26695_WT, HP26695_WGA, Tdenticola_NAT, Nostoc_NAT, HPJ99_NAT]
 runs: []
 acc:  [sup,hac]

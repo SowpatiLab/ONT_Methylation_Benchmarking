@@ -2,12 +2,12 @@
 This repository contains the scripts and code that was used for benchmarking various tools and models for Oxford Nanopore (ONT) sequencing based identification of DNA methylation. The corresponding preprint is [here](https://doi.org/10.1101/2024.11.09.622763)
 
 ## Contents
-The code is organized into two main folders:
+The code is organized into two main directorys:
 * Processing scripts
 * Plotting scripts
 
 ### Processing scripts
-This folder contains all the code that was required to convert variout modkit/bismark outputs into dataframes that can be used for comparison. In addition, there are also scripts that were used to subsample the data to various coverages, and to filter out reads under a specific q score.
+This directory contains all the code that was required to convert variout modkit/bismark outputs into dataframes that can be used for comparison. In addition, there are also scripts that were used to subsample the data to various coverages, and to filter out reads under a specific q score.
 
 ### Plotting scripts
 These are the code snippets that show how the plots used in the preprint were generated.
@@ -155,9 +155,13 @@ These are the code snippets that show how the plots used in the preprint were ge
 
 ## Reproducability
 
-A snakemake workflow has been provided in the [snakemake_pipeline](snakemake_pipeline/snakefile) folder. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. This workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake.md](snakemake_pipelines/snakemake.md) file.
+### With Snakemake
+A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake/snakefile) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake.md](benchmark_snakemake/snakemake.md) file.
 
-Furthermore an [example](example) folder has been provided with an a sample pod5 file, the use of which is elaborated further in [tutorial.md](tutorial.md).
+Furthermore an [example](example) directory has been provided with an a sample pod5 file, the use of which is elaborated further in [tutorial.md](tutorial.md).
+
+### With Nextflow
+Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow/workflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow.md](benchmark_nextflow/nextflow) file.
 
 ## Contact
 In case of any queries/suggestions, contact

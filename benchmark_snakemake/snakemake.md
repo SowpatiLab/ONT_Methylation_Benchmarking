@@ -57,28 +57,34 @@ In this example:
 
 #### Selecting which samples to run:
 Once the pod5 files are in the designated folder (mentioned in config.yaml), the "exps" key (on line 5) can be used to control which samples to be run.
-    eg: 
-        pod5 folder strurture:
-            .
-            ├── Anabaena_WT_5kHz
-            ├── Ecoli_DM_5kHz
-            ├── Ecoli_DM_MSssI_5kHz
-            ├── Ecoli_WT_5kHz
-            ├── HP26695_WGA_5kHz
-            ├── HP26695_WT_5kHz
-            ├── HPJ99_WT_5kHz
-            └── Tdenticola_WT_5kHz
+<pre>
+eg: 
+    pod5 folder strurture:
+        .
+        ├── Anabaena_WT_5kHz
+        ├── Ecoli_DM_5kHz
+        ├── Ecoli_DM_MSssI_5kHz
+        ├── Ecoli_WT_5kHz
+        ├── HP26695_WGA_5kHz
+        ├── HP26695_WT_5kHz
+        ├── HPJ99_WT_5kHz
+        └── Tdenticola_WT_5kHz
+    
+    For this setup, to run all the samples, the exps value has to
+    be populated like so:
         
-        for this setup, to run all the samples, the exps value has to be populated like so:
-            
-            exps: [Anabaena_WT,Ecoli_DM, Ecoli_DM_MSssI, Ecoli_WT, HP26695_WGA, HP26695_WT, HPJ99_WT, Tdenticola_WT]
+        exps: [Anabaena_WT,Ecoli_DM, Ecoli_DM_MSssI, Ecoli_WT,
+                HP26695_WGA, HP26695_WT, HPJ99_WT, Tdenticola_WT]
 
-            These are the names of the pod5 folders excluding the '_5kHz' part.
-            To limit the number of samples run, you can remove the values that you dont want to be processed from the list.
+        These are the names of the pod5 folders excluding 
+        the '_5kHz' part.
 
-            exps: [Ecoli_DM, Ecoli_WT]
-            here only Ecoli_DM and Ecoli_WT will be processed.
+        To limit the number of samples run, you can remove the 
+        values that you dont want to be processed from the list.
 
+        exps: [Ecoli_DM, Ecoli_WT]
+                here only Ecoli_DM and Ecoli_WT will be processed.
+</pre>
 
 ## Running the Snakemake workflow
 
