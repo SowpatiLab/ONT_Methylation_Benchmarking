@@ -2,12 +2,12 @@
 This repository contains the scripts and code that was used for benchmarking various tools and models for Oxford Nanopore (ONT) sequencing based identification of DNA methylation. The corresponding preprint is [here](https://doi.org/10.1101/2024.11.09.622763)
 
 ## Contents
-The code is organized into two main directorys:
+The code is organized into two main directories:
 * Processing scripts
 * Plotting scripts
 
 ### Processing scripts
-This directory contains all the code that was required to convert variout modkit/bismark outputs into dataframes that can be used for comparison. In addition, there are also scripts that were used to subsample the data to various coverages, and to filter out reads under a specific q score.
+This directory contains all the code that was required to convert various modkit/bismark outputs into dataframes that can be used for comparison. In addition, there are also scripts that were used to subsample the data to various coverages, and to filter out reads under a specific q score.
 
 ### Plotting scripts
 These are the code snippets that show how the plots used in the preprint were generated.
@@ -153,7 +153,7 @@ These are the code snippets that show how the plots used in the preprint were ge
     </tr>
 </table>
 
-## Reproducability
+## Reproducibility
 
 ### With Snakemake
 A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake/snakefile) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake.md](benchmark_snakemake/snakemake.md) file.
