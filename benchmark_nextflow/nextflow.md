@@ -16,9 +16,9 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [Mokit](https://github.com/nanoporetech/modkit) - v0.5.1-rc1<br/>
 
 The current workflow can be configured to run with existing working installations of said tools, else if not detected, the tools will be installed by the workflow in the directory
-mentioned in the [config_nf.json](../config_nf.json) file.
+mentioned in the [config.json](../config.json) file.
 
-<b>Note:</b> At the time of writing, DeepBAM and DeepPlant do not provide any precompiled versions of their software and hence they would still have to be installed manually, and the location to their respective executable will have to be provided in the [config_nf.json](../config_nf.json) file.
+<b>Note:</b> At the time of writing, DeepBAM and DeepPlant do not provide any precompiled versions of their software and hence they would still have to be installed manually, and the location to their respective executable will have to be provided in the [config.json](../config.json) file.
 
 
 ### Pre-requisites to run the workflow 
@@ -32,7 +32,7 @@ mentioned in the [config_nf.json](../config_nf.json) file.
     "pod5dir": "datasets/pod5"
 }
 ```
-#### Nomenclature rule:
+#### File name nomenclature rule:
 The pod5dir should have a folder for each unique experiment. The pod5 file(s) must me stored under the folder for each correspoding folder.
 
 Folder names must contain the '_5kHz' suffix, this enables nextflow to exclude folder that do not have the suffix. 
@@ -62,7 +62,7 @@ Folder names must contain the '_5kHz' suffix, this enables nextflow to exclude f
                                                           + MSssI treated
 </pre>
 
-These names can then be included under the "runControls" key in [config_nf.json](../config_nf.json).
+These names can then be included under the "runControls" key in [config.json](../config.json).
 
 <pre>
 {
@@ -169,7 +169,27 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 
 ```
     nextflow run benchmark_nextflow \
-        -param-dir config_nf.json
+        -param-dir config.json
+```
+
+## Running the workflow with apptainer
+Since DeepBAM and DeepPlant require sudo permissions to be installed, 
+we recommend building a containerised image with apptainer with the 
+[build config](../apptainer_setup.def) included in this repo for reproducibility sake.
+
+### Setting up the apptainer image
+
+```bash
+    # from this directory:
+    [ ! -d ../apptainer_build ] && mkdir ../apptainer_build;
+    sudo apptainer build apptainer_build/ontMethylationBenchmarking.sif ../apptainer_setup.def
+```
+### running with apptainer
+
+```
+    nextflow run benchmark_nextflow \
+        -param-dir config.json \
+        -with-apptainer
 ```
 
 ## Final folder structure 
@@ -207,6 +227,6 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 │   ├── rockfish
 │   └── rockfishmodels
 ├── benchmark_nextflow         # nextflow workflow is contained here
-├── config_nf.json
+├── config.json
 └── references.yaml
 ```

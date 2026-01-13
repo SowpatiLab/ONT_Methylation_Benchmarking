@@ -2,6 +2,7 @@ process nanostat {
     publishDir "qc/nanostat", mode: "copy"
     conda "bioconda::nanostat==1.6.0"
     label "cpu"
+    label 'std_conda'
 
     input: tuple path(input_bam), path(input_bam_idx)
     output: 
@@ -15,8 +16,10 @@ process nanostat {
 
 process nanoplot {
     publishDir "qc/nanoplot", mode: "copy"
-    conda "bioconda::nanoplot==1.46.0"
+
     label "cpu"
+    label 'std_conda'
+    // conda "bioconda::nanoplot==1.46.0"
 
     errorStrategy 'retry'
     maxRetries 3
@@ -33,8 +36,10 @@ process nanoplot {
 
 // process nanoq {
 //     publishDir "qc/nanoq", mode: "copy"
-//     conda "bioconda::nanoq==0.10.0"
+
 //     label "cpu"
+//     label 'std_conda'
+//     //conda "bioconda::nanoq==0.10.0"
 
 //     input: tuple path(input_fastq)
 //     output: 

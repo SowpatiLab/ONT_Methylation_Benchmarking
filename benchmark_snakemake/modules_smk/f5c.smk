@@ -61,7 +61,7 @@ rule f5c_restrand:
     log:    'log/f5c_restrand/{experiment}_5kHz_{acc}_v{ver}.tsv'
     threads: 20
     params: ref=getRef
-    shell: sh("python workflow/scripts/f5c_restrand.py -i {input} -r {params.ref} -o {output}")
+    shell: sh("python workflow/scripts_common/f5c_restrand.py -i {input} -r {params.ref} -o {output}")
 
 rule f5c_aggregate:
     input:  
@@ -78,7 +78,7 @@ rule f5c_fasta:
         bed="tool_out/f5c/aggregated{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.tsv",
         fasta=lambda wildcards: getRef(wildcards),
         genome=lambda wildcards: re.sub(r'.fa(sta|)', '.genome', getRef(wildcards))
-    output: "tool_out/f5c/aggregated_fasta{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.fasta.tsv"
+    output: "tool_out/f5c/aggregated_fasta{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.rebed.ref.tsv"
     log:    "log/f5c_fasta{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.log"
     threads: 20
     run: 
@@ -104,27 +104,9 @@ rule f5c_fasta:
             '''))
             
 rule consolidate_f5c:
-    input:  "tool_out/f5c/aggregated_fasta{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.fasta.tsv"
-    output: "meta/f5c{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.fasta.std.bed"
+    input:  "tool_out/f5c/aggregated_fasta{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.rebed.ref.tsv"
+    output: "meta/f5c{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.rebed.ref.std.bed"
     threads: 20
-    run:
-        import polars as pl
-        t = pl.read_csv(input[0], separator='\t', has_header=False, new_columns=['chrom', 'p1', 'p2', 'coverage', 's', 'strand', 'M', 'UM', 'per', 'full_context'])
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per', 'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
-        species = wildcards.experiment.split('_')[0]
-        
-        t = (
-            t.with_columns([
-                pl.lit('5mC').alias('mod'),
-                pl.lit('r10.4.1').alias('flowcell'),
-                (pl.col('M')+pl.col('UM')).alias('coverage'),
-                pl.lit(wildcards.experiment).alias('sample'),
-                pl.lit(f'f5c{wildcards.strandstate}').alias('tool'),
-                pl.lit(wildcards.acc).alias('acc'),
-                pl.lit('.').alias('model'),
-                pl.lit(f"{wildcards.sr}kHz").alias('sample_rate'),
-                pl.lit(species).alias('species'),
-                (pl.col('per')*100).alias('per')
-            ])
-        )
-        t.select(select).write_csv(output[0], separator='\t', include_header=True)
+    log: "log/consolidate_f5c{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}{stranded_ext}.log"
+    conda:  f"../{config['std_conda']}"
+    shell: sh("python workflow/scripts_common/f5c_consolidate.py {input} {output}")

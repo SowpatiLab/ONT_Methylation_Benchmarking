@@ -11,12 +11,10 @@ process bam_to_fastq {
     label 'std_conda'
 
     input:
-    tuple path(bam), path(bam_idx)
+        tuple path(bam), path(bam_idx)
 
     output:
-    path bam
-    path bam_idx
-    path "${bam.baseName}.fastq"
+        tuple path(bam), path(bam_idx), path("${bam.baseName}.fastq")
 
     script:
     """
@@ -31,18 +29,14 @@ process pod5_to_blow5 {
     label 'std_conda'
 
     input:
-    path bam
-    path bam_idx
-    path fastq
+        tuple path(pod5), path(bam), path(bam_idx), path(fastq), val(key)
 
     output:
-    tuple path("*.blow5"), path(bam), path(bam_idx), path(fastq)
+        tuple path("*.blow5"), path(bam), path(bam_idx), path(fastq)
 
     script:
-    pod5 = fetch_pod5_loc(bam)
-    sample = get_sample_name(bam)
     """
-        blue-crab p2s ${pod5} -t ${task.cpus} -o ${sample}.blow5
+        blue-crab p2s ${pod5} -t ${task.cpus} -o ${key}.blow5
     """
 }
 
@@ -81,13 +75,12 @@ process f5c_call {
     label 'gpu'
     
     input:
-    tuple path(install_dir), path(blow5), path(blow5_idx), path(bam), path(bam_idx), path(fastq), path(fastq_index), path(fastq_index_fai), path(fastq_index_gzi)
+    tuple path(install_dir), path(blow5), path(blow5_idx), path(bam), path(bam_idx), path(fastq), path(fastq_index), path(fastq_index_fai), path(fastq_index_gzi), path(reference)
 
     output:
     path "${bam.baseName}.f5c.tsv"
 
     script:
-    reference = fetch_ref("${bam}")
     execut = "${params.toolConfig.f5c.executable}"
     """
         ${install_dir}/${execut} call-methylation \
@@ -110,7 +103,7 @@ process f5c_restrand {
     path input_file
 
     output:
-    path "${input_file.baseName}.restranded.tsv"
+    path "${input_file.baseName}.stranded.tsv"
 
     when:
     params.runControls.other_tools.f5c_stranded.size() > 0
@@ -118,7 +111,7 @@ process f5c_restrand {
     script:
     reference = fetch_ref("${input_file}")
     """
-        python ${projectDir}/scripts/f5c_restrand.py -i ${input_file} -r ${reference} -o ${input_file.baseName}.restranded.tsv
+        python ${projectDir}/scripts/f5c_restrand.py -i ${input_file} -r ${reference} -o ${input_file.baseName}.stranded.tsv
     """
 }
 
@@ -133,11 +126,11 @@ process f5c_restrand {
 // }
 
 def isStranded(filename) {
-    return filename.split('\\.')[-2] == "restranded"
+    return filename.toString().contains("stranded")
 }
 
 process f5c_aggregate {
-    publishDir { "tool_out/f5c/aggregated${isStranded("${input_file}") ? '_stranded' : ''}" }
+    publishDir { "tool_out/f5c/aggregated${isStranded(input_file) ? '_stranded' : ''}" }
     
     label 'cpu'
     label 'std_conda'
@@ -156,9 +149,8 @@ process f5c_aggregate {
     """
 }
 
-
 process f5c_add_fasta {
-    publishDir { "tool_out/f5c/aggregated_fasta${isStranded("${input_file}") ? '_stranded' : ''}" }
+    publishDir { "tool_out/f5c/aggregated_fasta${isStranded(input_file) ? '_stranded' : ''}" }
 
     label 'cpu'
     conda 'bioconda::bedtools==2.30.0'
@@ -167,11 +159,11 @@ process f5c_add_fasta {
     path input_file
 
     output:
-    path "${input_file.baseName}.fasta.tsv"
+    path "${input_file.baseName}.rebed.ref.tsv"
 
     script:
     reference = fetch_ref("${input_file}")
-    stranded = isStranded("${input_file.baseName}")
+    stranded = isStranded("${input_file}")
     if (stranded) {
         """
             [ ! -d ${reference}.fai ] && samtools faidx -@ ${task.cpus} ${reference}
@@ -184,7 +176,7 @@ process f5c_add_fasta {
                 awk 'BEGIN{OFS="\\t"} { if(toupper(\$9)=="C") \$9="+"; else if(toupper(\$9)=="G") \$9="-"; print \$1,\$2,\$3,\$5,".",\$9,\$6,\$5-\$6,\$7 }' > \$tmp;
 
             bedtools slop -l 5 -r 11 -s -g ${reference}.genome -i \$tmp \
-                | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > ${input_file.baseName}.fasta.tsv;
+                | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > ${input_file.baseName}.rebed.ref.tsv;
             rm \$tmp
         """
     }
@@ -198,14 +190,14 @@ process f5c_add_fasta {
 
             sed '1d' ${input_file} | awk 'BEGIN{OFS="\\t"} {print \$1,\$2,\$2+1,\$5,".","+",\$6,\$5-\$6,\$7}' > \$tmp;
             bedtools slop -l 5 -r 11 -s -g ${reference}.genome -i \$tmp \
-                | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > ${input_file.baseName}.fasta.tsv;
+                | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > ${input_file.baseName}.rebed.ref.tsv;
             rm \$tmp
         """
     }
 }
 
 process consolidate_f5c {
-    publishDir { "meta/f5c${isStranded("${input_file}") ? '_stranded' : ''}" }, mode: "move"
+    publishDir { "meta/f5c${isStranded(input_file) ? '_stranded' : ''}" }, mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -218,6 +210,6 @@ process consolidate_f5c {
 
     script:
     """
-        python ${projectDir}/scripts/f5c_consolidate.py ${input_file} ${input_file.baseName}.std.bed
+        python ${projectDir}/scripts/f5c_consolidate.py ${input_file} ${input_file.baseName}.rebed.ref.bed
     """
 }

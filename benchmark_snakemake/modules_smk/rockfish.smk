@@ -60,7 +60,7 @@ rule rockfish_map:
     conda: config['toolConfig']['rockfish']['conda']
     params:
         ref=getRef
-    shell: sh("python workflow/scripts/rockfish_extract_ref_pos.py --workers {threads} {input} {params.ref} > {output}")
+    shell: sh("python workflow/scripts_common/rockfish_extract_ref_pos.py --workers {threads} {input} {params.ref} > {output}")
 
 rule rockfish_intersect:
     input: 
@@ -99,23 +99,6 @@ rule consolidate_rockfish:
     input:  "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
     output: "meta/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.std.bed"
     threads: 20
-    run:
-        import polars as pl
-        t = pl.read_csv(input[0], separator='\t', has_header=False, new_columns=['chrom', 'p1', 'p2', 'coverage', 's', 'strand', 'M', 'UM', 'per','full_context'])
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per', 'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
-        species = wildcards.experiment.split('_')[0]
-        
-        t = (
-            t.with_columns([
-                pl.lit('5mC').alias('mod'),
-                pl.lit('r10.4.1').alias('flowcell'),
-                pl.lit(wildcards.experiment).alias('sample'),
-                pl.lit('rockfish').alias('tool'),
-                pl.lit(wildcards.acc).alias('acc'),
-                pl.lit('.').alias('model'),
-                pl.lit(f"{wildcards.sr}kHz").alias('sample_rate'),
-                pl.lit(species).alias('species'),
-                (pl.col('per')*100).alias('per')
-            ])
-        )
-        t.select(select).write_csv(output[0], separator='\t', include_header=True)
+    conda:  f"../{config['std_conda']}"
+    log: "log/consolidate_rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.log"
+    shell: sh("python workflow/scripts_common/modkit_consolidate.py {input} {output}")

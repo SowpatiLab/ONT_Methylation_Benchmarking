@@ -1,4 +1,4 @@
-
+ 
 def inferDeepMod2Model(wildcards):
     models = {
         '5kHz_transformer_v5.2r2': "transformer_r10.4.1_5khz_v5.0",
@@ -60,17 +60,18 @@ rule deepmod2_call:
                 --batch_size 2048 \
                 --output {output} --device=cuda")
 
-rule consolidate_ref:
+rule deepmod_rebed_add_ref:
     input:   
         bed="tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.cleansed",
         fasta=lambda wildcards: getRef(wildcards),
         genome=lambda wildcards: re.sub(r'.fa(sta|)', '.genome', getRef(wildcards))
-    output:  "tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.ref.tsv"
+    output:  "tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.aggregated.rebed.ref.tsv"
     log:     "log/deepmod2_addref/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.log"
     threads: 20
     priority: 0
     params: 
         ref=getRef
+    conda:  f"../{config['std_conda']}"
     shell:   ntsh('''
         bed=$(mktemp /tmp/deepmod2_metadata.XXXX);
         sed '1d' {input.bed}/output.per_site | awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$3,$6,$5,$4,$7,$8,$9}}' > $bed;
@@ -79,30 +80,10 @@ rule consolidate_ref:
     ''')
 
 rule colsolidate_deepmod2:
-    input:  "tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.ref.tsv"
-    output: "meta/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.ref.std.bed"
+    input:  "tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.aggregated.rebed.ref.tsv"
+    output: "meta/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.aggregated.rebed.ref.std.bed"
     threads: 20
     priority: 0
-    run:
-        import polars as pl
-        from pathlib import Path
-        import re
-
-        t = pl.read_csv(f"{input[0]}", separator='\t', has_header=True, new_columns=['chrom', 'p1', 'p2', 'coverage', 'is_cpg', 'strand', 'M', 'UM', 'per', 'full_context'])
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per', 'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
-        species = wildcards.experiment.split('_')[0]
-        
-        (
-            t.with_columns([
-                pl.lit('5mC').alias('mod'),
-                pl.lit('r10.4.1').alias('flowcell'),
-                pl.lit(wildcards.experiment).alias('sample'),
-                pl.lit(f'deepmod2_{wildcards.deepmodel}').alias('tool'),
-                pl.lit(wildcards.acc).alias('acc'),
-                pl.lit(wildcards.deepmodel).alias('model'),
-                pl.lit(f"{wildcards.sr}kHz").alias('sample_rate'),
-                pl.lit(species).alias('species'),
-                (pl.col('per')*100).alias('per')
-            ])
-            .select(select)
-        ).write_csv(output[0], separator='\t', include_header=True)
+    conda:  f"../{config['std_conda']}"
+    log: "log/colsolidate_deepmod2_{deepmodel}/{experiment}_{sr}kHz_{acc}_v{ver}.log"
+    shell: sh("python workflow/scripts_common/deepmod2_consolidate.py {input} {output} {wildcards.deepmodel}")

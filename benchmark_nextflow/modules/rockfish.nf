@@ -48,27 +48,26 @@ process rockfish_call {
 }
 
 process rockfish_map_generate {
-    storeDir "rockfish/readwise"
+    storeDir "tool_out/rockfish/readwise"
     
     label 'cpu'
     label 'rockfish'
 
     input:
-    tuple path(input_bam), path(input_bam_idx), path(prediction_file)
+    tuple path(input_bam), path(input_bam_idx), path(predicton_file), path(reference)
 
     output:
     path "${input_bam.baseName}.bam_ref_map.tsv"
     path prediction_file
 
     shell:
-    reference = fetch_ref("${input_bam}")
     """
         python ${projectDir}/scripts/rockfish_extract_ref_pos.py --workers ${task.cpus} ${input_bam} ${reference} > ${input_bam.baseName}.bam_ref_map.tsv
     """
 }
 
 process rockfish_intersect {
-    publishDir "rockfish", mode: "copy"
+    publishDir "tool_out/rockfish", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -87,7 +86,7 @@ process rockfish_intersect {
 }
 
 process rockfish_aggregate {
-    publishDir "rockfish", mode: "copy"
+    publishDir "tool_out/rockfish", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -105,16 +104,17 @@ process rockfish_aggregate {
 }
 
 process rockfish_getfasta {
-    publishDir "rockfish", mode: "copy"
+    publishDir "tool_out/rockfish", mode: "copy"
 
     label 'cpu'
-    conda 'bioconda::bedtools==2.30.0'
+    label 'std_conda'
+    // conda 'bioconda::bedtools==2.30.0'
 
     input:
     path infile
 
     output:
-    path "${infile.baseName}.rebed.tsv"
+    path "${infile.baseName}.rebed.ref.tsv"
 
     script:
     reference = fetch_ref("${infile}")
@@ -126,7 +126,7 @@ process rockfish_getfasta {
         bedtools getfasta -fi ${reference} -bed ${infile} -bedOut | \
             awk 'BEGIN{OFS="\\t"} { if(toupper(\$7)=="C") \$7="+"; else if(toupper(\$7)=="G") \$7="-"; print \$1,\$2,\$3,\$5+\$6,".",\$7,\$5,\$6,\$4 }' > \$tmp;
         bedtools slop -g ${reference}.genome -l 5 -r 11 -s -i \$tmp | \
-            bedtools getfasta -s -fi ${reference} -bed - -tab | cut -f 2 | paste \$tmp - > "${infile.baseName}.rebed.tsv";
+            bedtools getfasta -s -fi ${reference} -bed - -tab | cut -f 2 | paste \$tmp - > "${infile.baseName}.rebed.ref.tsv";
         
         rm \$tmp;
     """

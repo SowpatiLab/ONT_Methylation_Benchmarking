@@ -3,8 +3,10 @@ include {
 } from '../lib/utils.groovy'
 
 process samtools_move_cleanse {
-    conda 'bioconda::samtools==1.21'
     storeDir "bam/sorted_move_cleansed"
+
+    label 'std_conda'
+    // conda 'bioconda::samtools==1.21'
 
     input:
     path input_file
@@ -22,8 +24,10 @@ process samtools_move_cleanse {
 }
 
 process samtools_mod_cleanse {
-    conda 'bioconda::samtools==1.21'
     storeDir "bam/sorted_mod_cleansed"
+
+    label 'std_conda'
+    // conda 'bioconda::samtools==1.21'
 
     input:
     path input_file

@@ -90,9 +90,10 @@ process download_dorado_mod_models {
 
 process dorado_move {
     storeDir "bam/sorted_move"
-    conda 'bioconda::samtools==1.21'
+    
     label 'gpu'
-    // label 'std_conda'
+    label 'std_conda'
+    // conda 'bioconda::samtools==1.21'
 
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model)
@@ -111,12 +112,12 @@ process dorado_move {
     """
 }
 
-
 process dorado_mod {
     storeDir "bam/sorted_mod"
 
     label 'gpu'
-    conda 'bioconda::samtools==1.21'
+    label 'std_conda'
+    // conda 'bioconda::samtools==1.21'
 
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model), path(mod_model)

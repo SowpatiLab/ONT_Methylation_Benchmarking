@@ -2,7 +2,7 @@ rule bam_fn_reorder:
     input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
     output: "bam/sorted_move_fnord/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
     log:    "log/sorted_move_by_fntag/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
-    conda: "snakemake"
+    conda:  f"../{config['std_conda']}"
     threads: 20
     resources:
         queue='hm-q',
@@ -45,7 +45,7 @@ rule deepplant_aggregate:
     input:  "tool_out/deepplant/readwise/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.tsv"
     output: "tool_out/deepplant/aggregated/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.tsv"
     threads: 20
-    # conda:  "snakemake"
+    conda:  f"../{config['std_conda']}"
     log:    "log/deepplant_aggregation/{experiment}_{sr}kHz_{acc}_v{ver}_{context}.log"
     params: aggregation_flags=config['toolConfig']['deepbam']['aggregation_flags']
     shell:  sh("python workflow/deepbam_aggregate.py \
@@ -77,24 +77,8 @@ rule consolidate_deepplant:
     input:  "tool_out/deepplant/agg_fasta/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.rebed.ref.tsv"
     output: "meta/deepplant/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.rebed.ref.std.bed"
     threads: 20
-    run:
-        import polars as pl
-        t = pl.read_csv(input[0], separator='\t', has_header=False, new_columns=['chrom', 'p1', 'p2', 'coverage', 's', 'strand', 'M', 'UM', 'per','full_context'])
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per', 'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
-        species = wildcards.experiment.split('_')[0]
-        
-        t = (
-            t.with_columns([
-                pl.lit('5mC').alias('mod'),
-                pl.lit('r10.4.1').alias('flowcell'),
-                (pl.col('M')+pl.col('UM')).alias('coverage'),
-                pl.lit(wildcards.experiment).alias('sample'),
-                pl.lit('deepplant').alias('tool'),
-                pl.lit(wildcards.acc).alias('acc'),
-                pl.lit('2024').alias('model'),
-                pl.lit(f"{wildcards.sr}kHz").alias('sample_rate'),
-                pl.lit(species).alias('species')
-            ])
-        )
-        t.select(select).write_csv(output[0], separator='\t', include_header=True)
+    conda:  f"../{config['std_conda']}"
+    log: "log/deepplant/{experiment}_{sr}kHz_{acc}_v{ver}_{context}.log"
+    shell: sh("python workflow/scripts_common/deeptools_consolidate.py {input} {output}")
+    # shell: "python {workflow.basedir}/scripts_common/deeptools_consolidate.py {input} {output}"
 

@@ -7,14 +7,14 @@ rule deepbam_call:
     priority: 0
     resources: gpu=1
     conda: config['toolConfig']['deepbam']['conda']
+    container: "/data1/ccmb/reuben/benchmarking/bacterial_nf/apptainer_final/ontMethylationBenchmarking.sif"
     log: "log/deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     params: 
         ref=getRef,
         model=config['toolConfig']['deepbam']['model'],
         call_flags=config['toolConfig']['deepbam']['call_flags']
     shell: ntsh('''
-        echo $CONDA_PREFIX;
-        {TIME} {DEEPBAM} extract_and_call_mods \
+        DeepBAM extract_and_call_mods \
         {input.pod5} {input.bam} {params.ref} \
         DNA {output} {params.model} {params.call_flags}
     ''')
@@ -57,23 +57,6 @@ rule consolidate_deepbam:
     input:  "tool_out/deepbam/agg_fasta/{experiment}_{sr}kHz_{acc}_v{ver}.deepbam.aggregated.rebed.ref.tsv"
     output: "meta/deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.deepbam.aggregated.rebed.ref.std.bed"
     threads: 20
-    run:
-        import polars as pl
-        t = pl.read_csv(input[0], separator='\t', has_header=False, new_columns=['chrom', 'p1', 'p2', 'coverage', 's', 'strand', 'M', 'UM', 'per','full_context'])
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per', 'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
-        species = wildcards.experiment.split('_')[0]
-        
-        t = (
-            t.with_columns([
-                pl.lit('5mC').alias('mod'),
-                pl.lit('r10.4.1').alias('flowcell'),
-                (pl.col('M')+pl.col('UM')).alias('coverage'),
-                pl.lit(wildcards.experiment).alias('sample'),
-                pl.lit('deepbam').alias('tool'),
-                pl.lit(wildcards.acc).alias('acc'),
-                pl.lit('2024').alias('model'),
-                pl.lit(f"{wildcards.sr}kHz").alias('sample_rate'),
-                pl.lit(species).alias('species')
-            ])
-        )
-        t.select(select).write_csv(output[0], separator='\t', include_header=True)
+    conda:  f"../{config['std_conda']}"
+    log: "log/consolidate_deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.log"
+    shell: sh("python workflow/scripts_common/deeptools_consolidate.py {input} {output}")

@@ -17,7 +17,7 @@ process setup_deepmod2 {
         source "\$(conda info --base)/etc/profile.d/conda.sh"
 
         git clone https://github.com/WGLab/DeepMod2.git "${params.toolConfig.deepmod2.install_dir}"
-            
+
         conda env create \
             -f "${params.toolConfig.deepmod2.install_dir}"/environment.yml \
             -n "${params.toolConfig.deepmod2.conda}" -y
@@ -32,17 +32,16 @@ process setup_deepmod2 {
 }
 
 process deepmod2_call {
-    storeDir "tool_out/deepmod2/readwise"
+    storeDir "tool_out/deepmod2"
 
     label 'gpu' 
     label 'deepmod2'
 
     input:
-    tuple path(deepmod2_dir), path(input_bam), path(input_bam_idx), val(model)
+    tuple path(deepmod2_dir), path(input_bam), path(input_bam_idx), path(reference), val(model)
 
     output:
     path "${input_bam.baseName}", emit: folder
-    // path "${input_bam.baseName}/output.per_site", emit: readwise
 
     script:
     model_path = fetch_deepmod2_model("${input_bam}", "${model}")
@@ -63,7 +62,7 @@ process deepmod2_call {
 }
 
 process deepmod2_add_ref {
-    publishDir "tool_out/deepmod2/readwise", mode: "copy"
+    publishDir "tool_out/deepmod2", mode: "copy"
 
     label 'cpu'
 
@@ -71,7 +70,7 @@ process deepmod2_add_ref {
     tuple path(input_folder), val(model)
 
     output:
-    tuple path("${input_folder}_${model}.deepmod2.ref.tsv"), val(model)
+    tuple path("${input_folder}_${model}.deepmod2.aggregated.rebed.ref.tsv"), val(model)
 
     script:
     reference = fetch_ref("${input_folder}")
@@ -82,7 +81,7 @@ process deepmod2_add_ref {
         tmp=\$(mktemp /tmp/deepmod2_metadata.XXXX);
         sed '1d' ${input_folder}/output.per_site | awk 'BEGIN{OFS="\\t"} {print \$1,\$2,\$3,\$6,\$5,\$4,\$7,\$8,\$9}' > \$tmp;
 
-        bedtools slop -g ${reference}.genome -l 5 -r 11 -i \$tmp -s | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > "${input_folder}_${model}.deepmod2.ref.tsv"
+        bedtools slop -g ${reference}.genome -l 5 -r 11 -i \$tmp -s | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > "${input_folder}_${model}.deepmod2.aggregated.rebed.ref.tsv"
         rm \$tmp
     """
 }

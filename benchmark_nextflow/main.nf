@@ -41,7 +41,7 @@ include { setup_f5c ; f5c_aggregate ; f5c_add_fasta ; consolidate_f5c } from './
 include {
     f5c_aggregate as f5c_aggregate_stranded ;
     f5c_add_fasta as f5c_add_fasta_stranded ;
-    consolidate_f5c as consolidate_f5c_stranded
+    consolidate_f5c as consolidate_f5c_stranded;
 } from './modules/f5c.nf'
 
 include { bam_fn_reorder ; deepbam_call ; deepplant_call } from './modules/deeptools.nf'
@@ -66,6 +66,14 @@ include {
 workflow {
 
     reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.refLookup).text)
+    def reference_map_ob = Channel.fromList(params.runControls.experiments)
+                .combine(Channel.of(params.pod5dir))
+                .map{ p5, dir -> [ 
+                    "${p5}_5kHz", 
+                    file("${dir}/${p5}_5kHz"), 
+                    file(reference_map['references'][p5.split('_')[0]])
+                ]}
+
     mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
 
     def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00
@@ -253,31 +261,43 @@ workflow {
         }
 
         // /* ROCKFISH */
-        if(params.runControls.other_tools.rockfish.size()>0){
+        def runRockfish = params.runControls.other_tools.rockfish.size()>0
+        if( runRockfish ){
             setup_rockfish()
 
-            rockfish_input = setup_rockfish.output
-                .combine(samtools_tuppled)
+            setup_rockfish.output
+                .combine(samtools_tuppled) | 
+                rockfish_call
 
-            rockfish_call(rockfish_input)
-
-            rockfish_map_generate(samtools_tuppled.combine(rockfish_call.output))
-            rockfish_intersect(rockfish_map_generate.output)
-            rockfish_aggregate(rockfish_intersect.output)
-            rockfish_getfasta(rockfish_aggregate.output)
-            consolidate_rockfish(rockfish_getfasta.output)
+            samtools_tuppled
+                .combine(rockfish_call.output)
+                .map{ bam, csi, rfOut -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi, rfOut ] }
+                .combine( reference_map_ob, by: 0 )
+                .map{ it -> [ it[-1], *it[1..-2]] } |
+                rockfish_map_generate |
+                rockfish_intersect
+                rockfish_aggregate
+                rockfish_getfasta
+                consolidate_rockfish
         }
 
         /* DEEPOMOD2 */
-        
-        if (params.runControls.other_tools.deepmod2_transformer.size()>0 || params.runControls.other_tools.deepmod2_bilstm.size()>0){
+        def run_deepMod2_transformer = params.runControls.other_tools.deepmod2_transformer.size()>0
+        def run_deepMod2_bilstm = params.runControls.other_tools.deepmod2_bilstm.size()>0
+
+        if ( run_deepMod2_transformer || run_deepMod2_bilstm ){
 
             setup_deepmod2()
 
-            deepmod2_input = setup_deepmod2.output.combine(samtools_tuppled)
+            deepmod2_input = samtools_tuppled
+                .map{ bam, csi -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi ]}
+                .combine(reference_map_ob, by: 0)
+                .map{ it -> [ *it[1..-3],  file(it[-1])] }
+                .combine(setup_deepmod2.output)
+                .map{ it -> [ it[-1], *it[0..-2]] }
 
             /* DEEPOMOD2 TRANSFORMER*/
-            if (params.runControls.other_tools.deepmod2_transformer.size()>0){
+            if ( run_deepMod2_transformer ){
                 dm2_trans_channel = deepmod2_input.combine(Channel.of('transformer'))
                 deepmod2_call_transformer(dm2_trans_channel)
 
@@ -289,7 +309,7 @@ workflow {
             }
 
             /* DEEPOMOD2 BiLSTM*/
-            if (params.runControls.other_tools.deepmod2_bilstm.size()>0){
+            if ( run_deepMod2_bilstm ){
                 dm2_blstm_channel = deepmod2_input.combine(Channel.of('BiLSTM'))
                 deepmod2_call_bilstm(dm2_blstm_channel)
 
@@ -302,17 +322,23 @@ workflow {
         }
 
         // /* F5C */
-        if( run_f5c ){            
-            pod5_to_blow5(fastq)
+        if( run_f5c ){
+            fastq
+                .map{ bam, csi, fq -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi, fq ]}
+                .combine(reference_map_ob, by: 0)
+                .map{ key, bam, csi, fq, p5, fa -> [p5, bam, csi, fq,  key] } |
+                pod5_to_blow5                     // blow5 generation
 
-            // installl f5c if not exist
-            setup_f5c()
+            setup_f5c |                           // install f5c if not exist
+                combine(pod5_to_blow5.output) |   // map on blow5 folders to fastq
+                f5c_idx_fastq                     // index fastq and blow5
 
-            f5c_idx_input  = setup_f5c.output.combine(pod5_to_blow5.output)
-            f5c_idx_fastq(f5c_idx_input)
-            f5c_call(f5c_idx_fastq.output)
+            f5c_idx_fastq.output                  // map blow5 folders and call
+                .map{ it -> ["${it[3].toString().split('/')[-1].split('_5kHz')[0]}_5kHz", *it ]}
+                .combine(reference_map_ob, by: 0)
+                .map{ it -> [ *it[1..9], file(it[-1]) ] } | f5c_call
 
-            // /* F5C unstranded pipeline */
+            /* F5C unstranded pipeline */
             if(params.runControls.other_tools.f5c.size()>0){
                 f5c_call_ob  = setup_f5c.output.combine(f5c_call.output)
                 f5c_aggregate(f5c_call_ob)
@@ -320,7 +346,7 @@ workflow {
                 consolidate_f5c(f5c_add_fasta.output)
             }
 
-            // // /* F5C restrand pipeline */
+            /* F5C restrand pipeline */
             if(params.runControls.other_tools.f5c_stranded.size()>0){
                 f5c_restrand(f5c_call.output)
                 f5c_call_ob  = setup_f5c.output.combine(f5c_restrand.output)
@@ -331,33 +357,53 @@ workflow {
         }
     
         /* DEEPBAM */
-        if(params.runControls.other_tools.deepbam.size()>0 || params.runControls.other_tools.deepplant.size()>0 ){
+        def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
+        def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
+        
+        if(run_deepBAM || run_deepPlant ){
             bam_fn_reorder(samtools_tuppled)
-        }
 
-        if(params.runControls.other_tools.deepbam.size()>0){
-            deepbam_call(bam_fn_reorder.output)
+            if(run_deepBAM){
+                deepBamIn = bam_fn_reorder.output
+                    .map{ it -> [
+                        "${it.toString().split('/')[-1].split('_5kHz')[0]}_5kHz",
+                        it
+                    ] }
+                    .combine(reference_map_ob, by: 0)
+                    .combine(Channel.of(params.toolConfig.deepbam.model))
+                    .map{ key, bam, pod5, fasta, model -> [ pod5, bam, fasta, file(model) ] }
+                    
+                deepbam_call(deepBamIn) 
+                deepbam_aggregate(deepbam_call.output)
+                deepbam_rebed(deepbam_aggregate.output)
+                deepbam_consolidate(deepbam_rebed.output)
+            }
 
-            deepbam_aggregate(deepbam_call.output)
-            deepbam_rebed(deepbam_aggregate.output)
-            deepbam_consolidate(deepbam_rebed.output)
-        }
+            // /* DEEP_PLANT */
+            if(run_deepPlant){
+                deepPlantIn = bam_fn_reorder.output
+                    .map{ it -> [
+                        "${it.toString().split('/')[-1].split('_5kHz')[0]}_5kHz",
+                        it
+                    ] }
+                    .combine(reference_map_ob, by: 0)
+                    .combine(Channel.of(params.toolConfig.deepplant.model))
+                    .map{ key, bam, pod5, fasta, model -> [ pod5, bam, fasta, file(model) ] }
 
-        // /* DEEP_PLANT */
-        if(params.runControls.other_tools.deepplant.size()>0){
-            deepplant_call(bam_fn_reorder.output)
-            
-            deepplant_aggregate_cpg(deepplant_call.output.cpg)
-            deepplant_aggregate_chg(deepplant_call.output.chg)
-            deepplant_aggregate_chh(deepplant_call.output.chh)
+                deepplant_call(deepPlantIn)
+                
+                deepplant_aggregate_cpg(deepplant_call.output.cpg)
+                deepplant_aggregate_chg(deepplant_call.output.chg)
+                deepplant_aggregate_chh(deepplant_call.output.chh)
 
-            deepplant_rebed_cpg(deepplant_aggregate_cpg.output)
-            deepplant_rebed_chg(deepplant_aggregate_chg.output)
-            deepplant_rebed_chh(deepplant_aggregate_chh.output)
+                deepplant_rebed_cpg(deepplant_aggregate_cpg.output)
+                deepplant_rebed_chg(deepplant_aggregate_chg.output)
+                deepplant_rebed_chh(deepplant_aggregate_chh.output)
 
-            deepplant_consolidate_cpg(deepplant_rebed_cpg.output)
-            deepplant_consolidate_chg(deepplant_rebed_chg.output)
-            deepplant_consolidate_chh(deepplant_rebed_chh.output)
+                deepplant_consolidate_cpg(deepplant_rebed_cpg.output)
+                deepplant_consolidate_chg(deepplant_rebed_chg.output)
+                deepplant_consolidate_chh(deepplant_rebed_chh.output)
+            }
         }
 
         if(run_qc){

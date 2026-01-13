@@ -6,9 +6,10 @@ include: 'getters.smk'
 rule all:
     input: 
         dorado=fetch_dorado_list(),
-        # nanoplot=expand("qc/nanoplot/{experiment}_5kHz_sup_v5r3", experiment=EXPS),
-        # nanostat=expand("qc/nanostat/{experiment}_5kHz_sup_v5r3.nanostat", experiment=EXPS),
-        # mosdepth=expand("qc/mosdepth/{experiment}_5kHz_{acc}_v5r3.png", experiment=EXPS, acc=ACC),
+        nanoq=fetch_qc_tool_list('nanoq'),
+        nanostat=fetch_qc_tool_list('nanostat'),
+        nanoplot=fetch_qc_tool_list('nanoplot'),
+        mosdepth=fetch_qc_tool_list('mosdepth'),
         rockfish=fetch_rockfish_list(),
         f5c_str=fetch_f5c_stranded_list(),
         f5c=fetch_f5c_list(),
@@ -16,58 +17,77 @@ rule all:
         DeepPlant=fetch_deepplant_list(),
         DeepMOD2_transformer=fetch_deepmod2_transformer_list(),
         DeepMOD2_bilstm=fetch_deepmod2_bilstm_list(),
-        
-for mode in ['move', 'mod']:
-    for sr, ver in  VERSIONS:
-        def dorado_setup():
-            if NRUNS==0:
-                return [
-                    config['pod5_dir'] + f"/{{experiment}}_{sr}kHz",
-                    f"bam/sorted_{mode}/{{experiment}}_{sr}kHz_{{acc}}_v{ver}{{mod}}.bam",
-                    f"log/dorado_{mode}/{{experiment}}_{sr}kHz_{{acc}}_v{ver}{{mod}}.log"
-                ]
-            else: 
-                return [
-                    config['pod5_dir'] + f"/{{experiment}}_run{{run}}_{sr}kHz",
-                    f"bam/sorted_sep_{mode}/{{experiment}}_run{{run}}_{sr}kHz_{{acc}}_v{ver}{{mod}}.bam",
-                    f"log/dorado_{mode}/{{experiment}}_run{{run}}_{sr}kHz_{{acc}}_v{ver}{{mod}}.log"
-                ]
 
-        rule:
-            name:  f"dorado_{sr}kHz_v{ver}_{mode}"
-            input:  dorado_setup()[0]
-            output: dorado_setup()[1]
-            log:    dorado_setup()[2]
-            threads: 40
-            resources:
-                gpu=1
-            params:
-                model=fetch_model,
-                mod_model=fetch_mod_model, # returns --emit-fastq if len(wildcards.mod)==0
-                ref=getRef,
-                dorver=select_dorado,
-                min_qscore=10
-            shell: sh('''
-                {params.dorver}/bin/dorado basecaller \
-                {params.model} {input} {params.mod_model} \
-                --min-qscore {params.min_qscore} \
-                --reference {params.ref} | {SAMTOOLS} sort -O BAM -@ {threads} -o {output} --write-index
-            ''')
+def download_dorado_version(wildcards, input, output):
+    print(subpath(output, basename=True))
+    return '/data1/ccmb/reuben/benchmarking/bacterial_nf/tooling/dorado/dorado111'
+
+# rule download_base_model:
+#     output: 
+#        directory( DORADO_MODELS + "/{dorado_model, (rna|dna)_r10.*}")
+#     threads: 10
+#     shell: """
+#         /data1/tools/dorado/dorado111/bin/dorado download \
+#             --model {wildcards.dorado_model} \
+#             --models-directory {DORADO_MODELS}
+#     """
+
+for mode in ['move', 'mod']:
+    # for sr, ver in  VERSIONS:
+    def dorado_setup():
+        if NRUNS==0:
+            return [
+                config['pod5dir'] + f"/{{experiment}}_{{sr}}kHz",
+                f"bam/sorted_{mode}/{{experiment}}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.bam",
+                f"log/dorado_{mode}/{{experiment}}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.log"
+            ]
+        else: 
+            return [
+                config['pod5dir'] + f"/{{experiment}}_run{{run}}_{{sr}}kHz",
+                f"bam/sorted_sep_{mode}/{{experiment}}_run{{run}}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.bam",
+                f"log/dorado_{mode}/{{experiment}}_run{{run}}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.log"
+            ]
+
+    rule:
+        name:  f"dorado_{mode}"
+        input:  dorado_setup()[0]
+        output: dorado_setup()[1]
+        log:    dorado_setup()[2]
+        threads: 40
+        resources:
+            gpu=2
+        params:
+            model=fetch_model,
+            mod_model=fetch_mod_model, # returns --emit-fastq if len(wildcards.mod)==0
+            ref=getRef,
+            dorver=select_dorado,
+            run_flags=config['toolConfig']['dorado']['run_flags']
+        conda: config['std_conda']
+        shell: sh('''
+            {DORADO_HOME}/{params.dorver}/bin/dorado basecaller \
+            {params.model} {input} {params.mod_model} \
+            {params.run_flags} \
+            --reference {params.ref} | {SAMTOOLS} sort -O BAM -@ {threads} -o {output} --write-index
+        ''')
 
 if NRUNS!=0:
     rule merge:
         input:  expand("bam/sorted_sep_{{doradomode}}/{{experiment}}_run{run}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.bam", run=RUNS)
         output: "bam/sorted_{doradomode}/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bam"
         threads: 40
+        conda: config['std_conda']
         shell: sh("{SAMTOOLS} merge -@ {threads} -O BAM -o {output} {input} --write-index")
 
 rule cleanse_bams:
     input:  "bam/sorted_{doradomode}/{sample}.bam"
-    output: "bam/sorted_{doradomode}_cleansed/{sample}.bam"
+    output: "bam/sorted_{doradomode}_cleansed/{sample}.cleansed.bam"
     log: "log/{doradomode}_cleanser/{sample}.log"
     threads: 20
-    params: std_chroms=fetch_chrom_str
-    shell:  sh("{SAMTOOLS} view {input} {params.std_chroms} -hbo {output} -@ {threads} -F 2304 --min-qlen 500 --write-index")
+    conda: config['std_conda']
+    params: 
+        std_chroms=fetch_chrom_str,
+        cleanse_flags=config['toolConfig']['samtools']['cleanse_flags']
+    shell:  sh("{SAMTOOLS} view {input} {params.std_chroms} -hbo {output} -@ {threads} {params.cleanse_flags} --write-index")
 
 rule index_fasta:
     input:  '{reference}.fa'
@@ -91,10 +111,11 @@ def modkit_set_params(wildcards):
         return "--ignore h"
     
 rule modkit:
-    input:  expand("bam/sorted_mod_cleansed/{{experiment}}_{{sr}}kHz_{{acc}}_v{{ver}}{mod}.bam", mod=lambda x: redundant_mod(x))
-    output: "modkit/pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bed"
+    input:  expand("bam/sorted_mod_cleansed/{{experiment}}_{{sr}}kHz_{{acc}}_v{{ver}}{mod}.cleansed.bam", mod=lambda x: redundant_mod(x))
+    output: "tool_out/dorado/pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.bed"
     threads: 40
     log:    "log/modkit_pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
+    conda: config['std_conda']
     params: 
         ref=getRef,
         set_params=modkit_set_params
@@ -102,152 +123,168 @@ rule modkit:
 
 rule addfasta:
     input:  
-        bed="modkit/pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bed",
+        bed="tool_out/dorado/pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.bed",
         fasta=lambda wildcards: getRef(wildcards),
         genome=lambda wildcards: re.sub(r'.fa(sta|)', '.genome', getRef(wildcards))
-    output: "modkit/ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bed"
+    output: "tool_out/dorado/ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.ref.bed"
     threads: 20
+    conda: config['std_conda']
     log: "log/modkit_ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
     shell: sh("{BEDTOOLS} slop -i {input.bed} -g {input.genome} -l 5 -r 11 -s | {BEDTOOLS} getfasta -fi {input.fasta} -bed - -tab -s | cut -f 2 | paste -d '\t'  {input.bed} - > {output}")
 
 rule modkit_add_metadata:
-    input:  "modkit/ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bed"
-    output: [ "meta/dorado/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.tsv" ]
+    input:  "tool_out/dorado/ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.ref.bed"
+    output: [ "meta/dorado/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.ref.std.tsv" ]
     log: "log/metadata/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
     threads: 20
-    run: 
-        import polars as pl
+    conda: config['std_conda']
+    shell: "python workflow/scripts_common/modkit_consolidate.py {input} {output}"
+    # run: 
+    #     import polars as pl
 
-        select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per',
-                   'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
+    #     select  = ['chrom', 'p1', 'p2', 'mod', 'coverage', 'strand', 'M', 'UM', 'per',
+    #                'flowcell', 'tool', 'model', 'sample', 'acc', 'sample_rate', 'species', 'full_context']
 
-        def load_modkit(fi):
-            exp, sr, acc, model, mod = re.match('(.*)_([4|5])kHz_(sup|hac)_(v[45.2]+r[123])_([564]m[CAG]+)', Path(fi).stem).group(1, 2, 3, 4, 5)
-            species = exp.split('_')[0]
-            modlookup = {'a': "6mA", 'm': "5mC", 'h': "5hmC", '21839': '4mC'}
-            filter_mod = {'_5mC':'m','_5mCG':'m', '_5hmC':'h','_5hmCG':'h','_4mC':'21839','_6mA':'a'}
-            strMatcher = {
-                '5mC':   r'^\w{5}C\w{11}$',
-                '5mCG':  r'^\w{5}C\w{11}$',
-                '5hmC':  r'^\w{5}C\w{11}$',
-                '5hmCG': r'^\w{5}C\w{11}$',
-                '4mC':   r'^\w{5}C\w{11}$',
-                '6mA':   r'^\w{5}A\w{11}$',
-            }
-            return (
-                pl.read_csv(fi, separator='\t', has_header=False,
-                    columns = [0,1,2,3,4,5,10,11,12,18],
-                    new_columns=['chrom', 'p1','p2','mod','coverage','strand','per','M','UM','full_context']
-                )
-                .filter(pl.col('mod')==filter_mod[wildcards.mod])
-                .filter(
-                    pl.col('full_context').str.to_uppercase().str.contains(strMatcher[mod])
-                ).with_columns([
-                    pl.lit(exp).alias('sample'),
-                    pl.col('mod').replace(modlookup).alias('mod'),
-                    pl.lit('r10.4.1').alias('flowcell'),
-                    pl.lit(f"dorado_{model}_{mod}").alias('tool'),
-                    pl.lit(f"{model}_{mod}").alias('model'),
-                    pl.lit(acc).alias('acc'),
-                    pl.lit(f"{sr}kHz").alias('sample_rate'),
-                    pl.lit(species).alias('species')
-                ]).select(select)
-            )
+    #     def load_modkit(fi):
+    #         exp, sr, acc, model, mod = re.match('(.*)_([4|5])kHz_(sup|hac)_(v[45.2]+r[123])_([564]m[CAG]+)', Path(fi).stem).group(1, 2, 3, 4, 5)
+    #         species = exp.split('_')[0]
+    #         modlookup = {'a': "6mA", 'm': "5mC", 'h': "5hmC", '21839': '4mC'}
+    #         filter_mod = {'_5mC':'m','_5mCG':'m', '_5hmC':'h','_5hmCG':'h','_4mC':'21839','_6mA':'a'}
+    #         strMatcher = {
+    #             '5mC':   r'^\w{5}C\w{11}$',
+    #             '5mCG':  r'^\w{5}C\w{11}$',
+    #             '5hmC':  r'^\w{5}C\w{11}$',
+    #             '5hmCG': r'^\w{5}C\w{11}$',
+    #             '4mC':   r'^\w{5}C\w{11}$',
+    #             '6mA':   r'^\w{5}A\w{11}$',
+    #         }
+    #         return (
+    #             pl.read_csv(fi, separator='\t', has_header=False,
+    #                 columns = [0,1,2,3,4,5,10,11,12,18],
+    #                 new_columns=['chrom', 'p1','p2','mod','coverage','strand','per','M','UM','full_context']
+    #             )
+    #             .filter(pl.col('mod')==filter_mod[wildcards.mod])
+    #             .filter(
+    #                 pl.col('full_context').str.to_uppercase().str.contains(strMatcher[mod])
+    #             ).with_columns([
+    #                 pl.lit(exp).alias('sample'),
+    #                 pl.col('mod').replace(modlookup).alias('mod'),
+    #                 pl.lit('r10.4.1').alias('flowcell'),
+    #                 pl.lit(f"dorado_{model}_{mod}").alias('tool'),
+    #                 pl.lit(f"{model}_{mod}").alias('model'),
+    #                 pl.lit(acc).alias('acc'),
+    #                 pl.lit(f"{sr}kHz").alias('sample_rate'),
+    #                 pl.lit(species).alias('species')
+    #             ]).select(select)
+    #         )
 
-        df = load_modkit(input[0])
-        df.write_csv(output[0], separator='\t', include_header=True)
-        # df.filter(pl.col('coverage')>=20).write_csv(output[1], separator='\t', include_header=True)
+    #     df = load_modkit(input[0]).with_columns(
+    #         pl.when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}CG\w{10}')).then(1)
+    #         .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC]G\w{9}')).then(2)
+    #         .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC][ATC]\w{9}')).then(3)
+    #         .otherwise(0)
+    #         .cast(pl.String)
+    #         .replace({ '0': 'other', '1': 'CpG', '2': 'CHG', '3': 'CHH' })
+    #         .alias('context')
+    #     )
+    #     df.write_csv(output[0], separator='\t', include_header=True)
 
-rule annotate:
-    input:  "meta/{tool}/{file}"
-    output: 
-        full="meta_context/{tool}/{file}",
-        # s20x="meta_context_20x/{tool}/{file}"
-    threads: 20
-    run:
-        import polars as pl
+# rule annotate:
+#     input:   "meta/{tool}/{file}"
+#     output: 
+#         full="meta_context/{tool}/{file}",
+#     threads: 20
+#     conda: config['std_conda']
+#     run:
+#         import polars as pl
 
-        df = (
-            pl.read_csv(input[0], separator='\t', has_header=True)
-            .with_columns(
-                pl.when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}CG\w{10}')).then(1)
-                .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC]G\w{9}')).then(2)
-                .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC][ATC]\w{9}')).then(3)
-                .otherwise(0)
-                .cast(pl.String)
-                .replace({ '0': 'other', '1': 'CpG', '2': 'CHG', '3': 'CHH' })
-                .alias('context')
-            )
-        )
-        df.write_csv(output[0], separator='\t', include_header=True)
-        # df.filter(pl.col('coverage')>=20).write_csv(output[1], separator='\t', include_header=True)
+#         df = (
+#             pl.read_csv(input[0], separator='\t', has_header=True)
+#             .with_columns(
+#                 pl.when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}CG\w{10}')).then(1)
+#                 .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC]G\w{9}')).then(2)
+#                 .when(pl.col('full_context').str.to_uppercase().str.contains(r'\w{5}C[ATC][ATC]\w{9}')).then(3)
+#                 .otherwise(0)
+#                 .cast(pl.String)
+#                 .replace({ '0': 'other', '1': 'CpG', '2': 'CHG', '3': 'CHH' })
+#                 .alias('context')
+#             )
+#         )
+#         df.write_csv(output[0], separator='\t', include_header=True)
 
 rule mosdepth:
-    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
+    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
     output: directory("qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}")
     log:    "log/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
-    shell: sh("mkdir {output}; {TIME} mosdepth -t {threads} {output}/{wildcards.experiment}_{wildcards.sr}kHz_{wildcards.acc}_v{wildcards.ver} {input}")
+    conda: 'envs/mosdepth_env.yml'
+    params: basename=subpath(output[0], basename=True)
+    shell: ntsh("mkdir -p {output}; {TIME} mosdepth -t {threads} {output}/{params.basename} {input}")
 
-rule plot_mosdepth:
-    input:  "qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}"
-    output: 
-        total="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}.png",
-        chroms="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}_chroms.png"
-    threads: 10
-    run:
-        import polars as pl
-        import seaborn as sns
-        import matplotlib.pyplot as plt
+# rule plot_mosdepth:
+#     input:  "qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}"
+#     output: 
+#         total="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}.png",
+#         chroms="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}_chroms.png"
+#     threads: 10
+#     conda: config['std_conda']
+#     run:
+#         import polars as pl
+#         import seaborn as sns
+#         import matplotlib.pyplot as plt
 
-        fi = f"{input[0]}/{wildcards.experiment}_{wildcards.sr}kHz_{wildcards.acc}_v{wildcards.ver}.mosdepth.global.dist.txt"
-        mosdepth = pl.read_csv(fi, separator='\t', has_header=False, new_columns=['chrom', 'coverage', 'per'])
-        ax = sns.lineplot(mosdepth.filter(pl.col('chrom')=='total'), x='coverage', y='per', palette='Spectral')
+#         fi = f"{input[0]}/{wildcards.experiment}_{wildcards.sr}kHz_{wildcards.acc}_v{wildcards.ver}.mosdepth.global.dist.txt"
+#         mosdepth = pl.read_csv(fi, separator='\t', has_header=False, new_columns=['chrom', 'coverage', 'per'])
+#         ax = sns.lineplot(mosdepth.filter(pl.col('chrom')=='total'), x='coverage', y='per', palette='Spectral')
 
-        x_lim = mosdepth.filter(pl.col('chrom')=='total').filter(pl.col('coverage')!=0)['coverage'].max()
-        print(x_lim)
-        ax.set(
-            title=f'mosdepth | {wildcards.experiment}',
-            xlim=(-1, x_lim),
-            ylabel='Proportion of genome at coverage'
-        )
-        plt.tight_layout()
-        plt.savefig(output[0], dpi=300)
+#         x_lim = mosdepth.filter(pl.col('chrom')=='total').filter(pl.col('coverage')!=0)['coverage'].max()
+#         print(x_lim)
+#         ax.set(
+#             title=f'mosdepth | {wildcards.experiment}',
+#             xlim=(-1, x_lim),
+#             ylabel='Proportion of genome at coverage'
+#         )
+#         plt.tight_layout()
+#         plt.savefig(output[0], dpi=300)
 
-        ax = sns.lineplot(mosdepth.filter(pl.col('chrom')!='total'), x='coverage', y='per', palette='Spectral', hue='chrom')
-        ax.set(
-            title=f'mosdepth | chrtomosome wise | {wildcards.experiment}',
-            xlim=(-1, x_lim),
-            ylabel='Proportion of genome at coverage'
-        )
-        plt.tight_layout()
-        plt.savefig(output[1], dpi=300)
+#         ax = sns.lineplot(mosdepth.filter(pl.col('chrom')!='total'), x='coverage', y='per', palette='Spectral', hue='chrom')
+#         ax.set(
+#             title=f'mosdepth | chrtomosome wise | {wildcards.experiment}',
+#             xlim=(-1, x_lim),
+#             ylabel='Proportion of genome at coverage'
+#         )
+#         plt.tight_layout()
+#         plt.savefig(output[1], dpi=300)
 
 rule bam_to_fastq:
-    input:  "bam/sorted_move/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
-    output: "fastq_nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.fastq"
+    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
+    output: "intermediary/fastq/{experiment}_{sr}kHz_{acc}_v{ver}.fastq"
     threads: 10
     log: "log/bam_to_fastq/{experiment}_{sr}kHz_{acc}_v{ver}.log"
+    conda: config['std_conda']
     shell: sh("{SAMTOOLS} fastq -@ {threads} {input} -0 {output}")
 
 rule nanoq:
-    input:  "fastq_nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.fastq"
+    input:  "intermediary/fastq/{experiment}_{sr}kHz_{acc}_v{ver}.fastq"
     output: "qc/nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.nanoq"
     log:    "log/nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
+    conda: 'envs/mosdepth_env.yml'
     shell:  sh("nanoq -s -i {input} > {output}" )
 
 rule nanostat:
-    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_sup_v{ver}.bam"
-    output: "qc/nanostat/{experiment}_{sr}kHz_sup_v{ver}.nanostat"
-    log:    "log/nanostat/{experiment}_{sr}kHz_sup_v{ver}.log"
+    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
+    output: "qc/nanostat/{experiment}_{sr}kHz_{acc}_v{ver}.nanostat"
+    log:    "log/nanostat/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
+    conda: config['std_conda']
     shell:  sh("NanoStat --bam {input} > {output}") 
 
 rule nanoplot:
-    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
+    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
     output: directory("qc/nanoplot/{experiment}_{sr}kHz_{acc}_v{ver}")
     threads: 20
+    conda: config['std_conda']
     shell: sh('''
-        mkdir {output}; NanoPlot --no_static --only-report --minqual 0 --bam {input} --raw --tsv_stats -t {threads} -o {output}
+        mkdir -p {output}; NanoPlot --no_static --only-report --minqual 0 --bam {input} --raw --tsv_stats -t {threads} -o {output}
     ''')
