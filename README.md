@@ -21,6 +21,7 @@ These are the code snippets that show how the plots used in the preprint were ge
         <th>SampleRate</th>
         <th>Model</th>
         <th>Mods</th>
+        <th>Alias</th>
     </tr>
     <tr>
         <td rowspan="6">1</td>
@@ -28,31 +29,37 @@ These are the code snippets that show how the plots used in the preprint were ge
         <td>4kHz</td>
         <td>res_dna_r10.4.1_e8.2_400bps_sup@v4.0.1_5mC@v2</td>
         <td>5mC</td>
+        <td>v4r2</td>
     </tr>
     <tr>
         <td>5kHz</td>
-        <td>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mC_5hmC@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mCG_5hmCG@v1 <br/>res_dna_r10.4.1_e8.2_400bps_sup@v4.3.0_4mC_5mC@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_6mA@v2</td>
+        <td>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mC_5hmC@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mCG_5hmCG@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_6mA@v2<br/>res_dna_r10.4.1_e8.2_400bps_sup@v4.3.0_4mC_5mC@v1</td>
         <td> 5mC<br/> 5mCG<br/> 6mA<br/> 4mC</td>
-    </tr>
-    <tr>
-        <td>5kHz</td>
-        <td>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mC_5hmC@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_5mCG_5hmCG@v1 <br/>res_dna_r10.4.1_e8.2_400bps_sup@v4.3.0_4mC_5mC@v1 <br/>dna_r10.4.1_e8.2_400bps_sup@v4.3.0_6mA@v2</td>
-        <td> 5mC<br/> 5mCG<br/> 6mA<br/> 4mC</td>
+        <td> v4r1<br/> v4r1<br/> v4r1<br/> v4r1</td>
     </tr>
     <tr>
         <td>5kHz</td>
         <td>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_5mC_5hmC@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_5mCG_5hmCG@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_6mA@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_4mC_5mC@v1</td>
         <td> 5mC<br/> 5mCG<br/> 6mA<br/> 4mC</td>
+        <td> v5r1<br/> v5r1<br/> v5r1<br/> v5r1</td>
     </tr>
     <tr>
         <td>5kHz</td>
         <td>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_5mC_5hmC@v3<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_5mCG_5hmCG@v3<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_6mA@v3<br/>dna_r10.4.1_e8.2_400bps_sup@v5.0.0_4mC_5mC@v3</td>
         <td> 5mC<br/> 5mCG<br/> 6mA<br/> 4mC</td>
+        <td> v5r3<br/> v5r3<br/> v5r3<br/> v5r3</td>
     </tr>
     <tr>
         <td>5kHz</td>
         <td>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_5mC_5hmC@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_5mCG_5hmCG@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_6mA@v1<br/>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_4mC_5mC@v1</td>
         <td> 5mC<br/> 5mCG<br/> 6mA<br/> 4mC</td>
+        <td> v5.2r1<br/> v5.2r1<br/> v5.2r1<br/> v5.2r1</td>
+    </tr>
+    <tr>
+        <td>5kHz</td>
+        <td>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_5mC_5hmC@v2<br/>dna_r10.4.1_e8.2_400bps_sup@v5.2.0_5mCG_5hmCG@v2</td>
+        <td> 5mC<br/> 5mCG</td>
+        <td> v5.2r2<br/> v5.2r2</td>
     </tr>
     <tr>
         <td>2</td>
@@ -60,6 +67,7 @@ These are the code snippets that show how the plots used in the preprint were ge
         <td>5kHz</td>
         <td>5kHz_Transformer<br/>5kHz_BiLSTM</td>
         <td>5mCG</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>3</td>
@@ -67,6 +75,7 @@ These are the code snippets that show how the plots used in the preprint were ge
         <td>5kHz</td>
         <td>-</td>
         <td>5mCG</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>4</td>
@@ -74,6 +83,7 @@ These are the code snippets that show how the plots used in the preprint were ge
         <td>5kHz</td>
         <td>rf_5kHz.ckpt</td>
         <td>5mCG</td>
+        <td>-</td>
     </tr>
     <tr>
         <td>5</td>
@@ -81,13 +91,15 @@ These are the code snippets that show how the plots used in the preprint were ge
         <td>5kHz</td>
         <td>LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt</td>
         <td>5mCG</td>
+        <td>-</td>
     </tr>
     <tr>
-        <td>5</td>
+        <td>6</td>
         <td>DeepPlant</td>
         <td>5kHz</td>
         <td>both_bilstm.b51_s15_epoch8.cpg<br/>  both_bilstm.b51_s15_epoch9.chg <br/> both_bilstm.b13_s15_epoch8.chh </td>
         <td>5mCG<br/>5mCHG<br/>5mCHH</td>
+        <td>-</td>
     </tr>
 
 
@@ -156,12 +168,12 @@ These are the code snippets that show how the plots used in the preprint were ge
 ## Reproducibility
 
 ### With Snakemake
-A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake/snakefile) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake.md](benchmark_snakemake/snakemake.md) file.
+A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake/snakefile) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake readme.md](benchmark_snakemake/readme.md) file.
 
 Furthermore an [example](example) directory has been provided with an a sample pod5 file, the use of which is elaborated further in [tutorial.md](tutorial.md).
 
 ### With Nextflow
-Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow/workflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow.md](benchmark_nextflow/nextflow) file.
+Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow/workflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow readme.md](benchmark_nextflow/readme.md) file.
 
 ## Contact
 In case of any queries/suggestions, contact
