@@ -24,20 +24,19 @@ process setup_rockfish {
 }
 
 process rockfish_call {
-    storeDir "rockfish"
+    storeDir "tool_out/rockfish"
     label 'gpu'
     label 'rockfish'
 
     conda "${params.conda_dir}/envs/${params.toolConfig.rockfish.conda}"
 
     input:
-    tuple path(rockfish), path(rockfishmodels), path(input_bam), path(input_bam_idx)
+    tuple path(pod5), path(rockfish), path(rockfishmodels), path(input_bam), path(input_bam_idx)
 
     output:
     path "${input_bam.baseName}.tsv"
 
     shell:
-    pod5 = fetch_pod5_loc("${input_bam}")
     """
         rockfish inference \
             -i ${pod5} --bam_path ${input_bam} \
@@ -58,11 +57,11 @@ process rockfish_map_generate {
 
     output:
     path "${input_bam.baseName}.bam_ref_map.tsv"
-    path prediction_file
+    path "${predicton_file}"
 
     shell:
     """
-        python ${projectDir}/scripts/rockfish_extract_ref_pos.py --workers ${task.cpus} ${input_bam} ${reference} > ${input_bam.baseName}.bam_ref_map.tsv
+        python ${projectDir}/scripts_common/rockfish_extract_ref_pos.py --workers ${task.cpus} ${input_bam} ${reference} > ${input_bam.baseName}.bam_ref_map.tsv
     """
 }
 
@@ -81,7 +80,7 @@ process rockfish_intersect {
 
     script:
     """
-        python ${projectDir}/scripts/rockfish_intersect.py -i ${prediction_file} -r ${ref_map} -o "${prediction_file.baseName}.intercept.tsv"
+        python ${projectDir}/scripts_common/rockfish_intersect.py -i ${prediction_file} -r ${ref_map} -o "${prediction_file.baseName}.intercept.tsv"
     """
 }
 
@@ -99,7 +98,7 @@ process rockfish_aggregate {
 
     script:
     """
-        python ${projectDir}/scripts/rockfish_aggregate.py -i ${read_file_mapped} -o "${read_file_mapped.baseName}.aggregated.tsv"
+        python ${projectDir}/scripts_common/rockfish_aggregate.py -i ${read_file_mapped} -o "${read_file_mapped.baseName}.aggregated.tsv"
     """
 }
 
@@ -145,6 +144,6 @@ process consolidate_rockfish {
 
     script:
     """
-        python ${projectDir}/scripts/rockfish_consolidate.py ${input_file} ${input_file.baseName}.std.bed
+        python ${projectDir}/scripts_common/rockfish_consolidate.py ${input_file} ${input_file.baseName}.std.bed
     """
 }

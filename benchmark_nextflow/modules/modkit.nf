@@ -84,6 +84,6 @@ process standardise_dorado {
 
     script:
     """
-        python ${projectDir}/scripts/modkit_consolidate.py ${input_file} ${input_file.baseName}.std.bed
+        python ${projectDir}/scripts_common/modkit_consolidate.py ${input_file} ${input_file.baseName}.std.bed
     """
 }

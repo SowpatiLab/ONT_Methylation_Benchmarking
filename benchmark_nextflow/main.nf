@@ -1,63 +1,28 @@
-include {
-    select_base_model;
-    select_mod_model;
-} from './lib/utils.groovy'
+include { 
+    DORADO_SETUP; DORADO_BASECALL_MODIFIED; 
+    DORADO_BASECALL_MOVETABLE 
+} from './subworkflows/dorado_basecall_subwf.nf'
+
+include { ROCKFISH_SUBWORKFLOW } from './subworkflows/rockfish_subwf.nf'
 
 include {
-    install_rerio;
-    download_rerio_models ;
-    install_dorado ;
-    download_dorado_base_model ;
-    download_dorado_mod_models ;
-    dorado_mod ;
-    dorado_move;
-} from './modules/dorado.nf'
+    DEEPMOD2_WORKFLOW as DEEPMOD2_WORKFLOW_TRANSFORMER;
+    DEEPMOD2_WORKFLOW as DEEPMOD2_WORKFLOW_BILSTM;
+} from './subworkflows/deepmod2_subwf.nf'
 
-include { samtools_move_cleanse ; samtools_mod_cleanse } from './modules/samtools.nf'
-include { install_modkit; modkit_pileup ; modkit_add_ref ; standardise_dorado } from './modules/modkit.nf'
-include {
-    setup_rockfish ;
-    rockfish_call ;
-    rockfish_map_generate ;
-    rockfish_intersect ;
-    rockfish_aggregate ;
-    rockfish_getfasta ;
-    consolidate_rockfish
-} from './modules/rockfish.nf'
+include { 
+    F5C_GENERAL_WORKFLOW;
+    F5C_UNSTRANDED_WORKFLOW;
+    F5C_RESTRANDED_WORKFLOW;
+} from './subworkflows/f5c_subwf.nf' 
 
-include {
-    setup_deepmod2 ;
-    deepmod2_call as deepmod2_call_transformer ;
-    deepmod2_add_ref as deepmod2_add_ref_transformer ;
-    consolidate_deepmod2 as consolidate_deepmod2_transformer
-} from './modules/deepmod2.nf'
-include {
-    deepmod2_call as deepmod2_call_bilstm ;
-    deepmod2_add_ref as deepmod2_add_ref_bilstm ;
-    consolidate_deepmod2 as consolidate_deepmod2_bilstm
-} from './modules/deepmod2.nf'
-include { bam_to_fastq ; pod5_to_blow5 ; f5c_idx_fastq ; f5c_call ; f5c_restrand } from './modules/f5c.nf'
-include { setup_f5c ; f5c_aggregate ; f5c_add_fasta ; consolidate_f5c } from './modules/f5c.nf'
-include {
-    f5c_aggregate as f5c_aggregate_stranded ;
-    f5c_add_fasta as f5c_add_fasta_stranded ;
-    consolidate_f5c as consolidate_f5c_stranded;
-} from './modules/f5c.nf'
-
-include { bam_fn_reorder ; deepbam_call ; deepplant_call } from './modules/deeptools.nf'
-include {
-    deetool_aggregate as deepbam_aggregate ;
-    deeptool_rebed as deepbam_rebed ;
-    deepbam_consolidate
-} from './modules/deeptools.nf'
-include { deetool_aggregate as deepplant_aggregate_cpg ; deeptool_rebed as deepplant_rebed_cpg ; deepplant_consolidate as deepplant_consolidate_cpg } from './modules/deeptools.nf'
-include { deetool_aggregate as deepplant_aggregate_chg ; deeptool_rebed as deepplant_rebed_chg ; deepplant_consolidate as deepplant_consolidate_chg } from './modules/deeptools.nf'
-include { deetool_aggregate as deepplant_aggregate_chh ; deeptool_rebed as deepplant_rebed_chh ; deepplant_consolidate as deepplant_consolidate_chh } from './modules/deeptools.nf'
+include { DEEPTOOLS_GENERAL_SUBWORKFLOW; DEEPBAM_SUBWORKFLOW; DEEPPLANT_SUBWORKFLOW } from './subworkflows/deeptools_subwf.nf'
 
 include {
     nanostat;
     nanoplot;
     mosdepth;
+    nanoq;
 } from './modules/qc.nf'
 
 
@@ -76,18 +41,17 @@ workflow {
 
     mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
 
-    def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00
-    def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00
+    def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
+    def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00        // return 2 f other tools are activated
     def run_selector =  run_qc + others
-    // install dorado if not exist
-    // check required models and determine which dorado versions to download
 
     models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
     models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
+    
     // if qc is activate d set default model to v5r3
     models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
     model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
-    
+
     // create a model lookup for later
     model_setup = Channel
         .from(model_lookup_all)
@@ -95,321 +59,133 @@ workflow {
         .unique()
 
     // isolate unique dorado versions that need to be installed
+    experiment_list = Channel.fromList(params.runControls.experiments)
+    accuracy_list   = Channel.fromList(params.runControls.accuracy)
     install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
-    install_dorado(install_versions) // install dorado versions
-
     dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
 
-    install_dorado_versions = install_dorado.output
-        .map { d -> [dorver_nam_aliases["$d.baseName"], d] }
-
-    run_all      = model_setup
-                    .combine(install_dorado_versions, by: 0)
-                    
-    run_mod  = run_all.filter { i -> i[1]==~/^[456]m[ACG]+$/ }
-    run_move = run_all.filter { i -> !(i[1]==~/^[456]m[ACG]+$/) }
-                    .map{ dorall, mod, ver, dorado -> 
-                        def modelType = mod.matches('^[456]m[ACG]+$') ? mod : '5mC'
-                        // def toolType = mod.matches('^[456]m[ACG]+$') ? 'dorado' : mod
-                        
-                        [ dorall, modelType, ver, dorado ]
-                    }.unique()
-
-    dorado_mod_run_channels = run_mod
-        .combine(Channel.fromList(params.runControls.experiments))
-        .combine(Channel.fromList(params.runControls.accuracy))
-        .combine(Channel.of('5'))
-        .unique()
-        .map{ doralias, mod, ver, dorado, exp, acc, sr -> ["${sr}kHz_${acc}_${ver}_${mod}", exp ] }
-
-    // setting up the input for base model download
-    base_models = run_all
-        .map{ dorall, mod, ver, dorado -> 
-            def modelType = mod.matches('^[456]m[ACG]+$') ? mod : '5mC'            
-            [ dorall, modelType, ver, dorado ]
-        }
-        .combine(Channel.fromList(params.runControls.experiments))
-        .combine(Channel.fromList(params.runControls.accuracy))
-        .combine(Channel.of('5'))
-        .unique()
-        .map{ doralias, mod, ver, dorado, exp, acc, sr -> [ select_base_model(sr, acc, ver, mod), dorado ] }
-        .unique()
-
-    download_dorado_base_model(base_models) // download base models
+    /* DORADO SETUP */
+    // // install dorado if not exist
+    // // check required models and determine which dorado versions to download
+    DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
     
-    if (mod_list_filter.size()>0){
-        // setting up the input for mod model download
-        mod_models = run_mod
-            .combine(Channel.fromList(params.runControls.experiments))
-            .combine(Channel.fromList(params.runControls.accuracy))
-            .combine(Channel.of('5'))
-            .unique()
-            .map{ doralias, mod, ver, dorado, exp, acc, sr -> [ select_base_model(sr, acc, ver, mod), "${sr}kHz_${acc}_${ver}_${mod}", select_mod_model(sr, acc, ver, "_${mod}"), dorado ] }
-            .unique()
+    run_mod = DORADO_SETUP.out.run_mod
+    run_move = DORADO_SETUP.out.run_move
+    dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
+    download_dorado_base_model = DORADO_SETUP.out.download_dorado_base_model
 
-        // filter out non existant models
-        def black_list_models = params.runControls.dorado_model_blacklist
-        mod_models = mod_models
-            .filter{ it ->  
-                if(black_list_models.contains(it[1].toString()) ){
-                    log.warn "${it[0].toString()} not available, skipping."
-                }
-                !black_list_models.contains(it[1].toString()) }
-            .branch{ it -> 
-                rerio:  it[2].find('^res_*')
-                dorado: it[2].find('^dna_*')
-            }
+    // RUN DORADO BASECALLER for MODIFIED BASES
+    if(models_lookup_mods.size() > 0){
+        def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
         
-        download_dorado_mod_models(mod_models.dorado)  // downalod dorado modification models
-        
-        def rerio_models = Channel.empty()
-
-        mod_models.rerio.ifEmpty([])
-        install_rerio()  // downalod rerio modification models
-        rerio_models = mod_models.rerio
-            .map{ baseAlias, modAlias, mod, dorado ->  [ baseAlias, modAlias, mod, dorado ]}
-            .combine(install_rerio.output)
-
-        rerio_models = download_rerio_models(rerio_models)
-        
-        all_mod_models =  rerio_models
-            .mix(download_dorado_mod_models.output)
-
-        filter_models = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
-            .combine(Channel.fromList(params.runControls.accuracy))
-            .map{ ver, acc -> [ select_base_model('5', acc, ver, '5mC'), 'dorado' ]}
-            .unique()
-
-        // remove all versions not listed in dorado_mod_models
-        download_dorado_base_model_selected = download_dorado_base_model.output
-            .combine(filter_models)
-            .filter{ it -> it[0]==it[3]}
-            .map{ it -> it[0..2]}
-
-        dorado_mod_inputs = download_dorado_base_model_selected
-            .combine(all_mod_models, by: 0)
-            .map{ model_alias, dorado, base, key, mod -> [ key, dorado, base, mod ]}
-            .combine(dorado_mod_run_channels, by: 0)
-            .unique()
-            .map{ key, dorver, base, mod, exp -> [exp, key, dorver, base, mod]}
-
-        // mod basecall stage
-
-        dorado_mod(dorado_mod_inputs)
-        samtools_mod_cleanse(dorado_mod.output)
-
-        install_modkit()
-        mokit_pileup_in = samtools_mod_cleanse.out.bam
-            .merge(samtools_mod_cleanse.out.csi)
-
-        mokit_pileup_in = install_modkit.output
-            .combine(mokit_pileup_in)
-            
-
-        modkit_pileup(mokit_pileup_in)
-        modkit_add_ref(modkit_pileup.output)
-        standardise_dorado(modkit_add_ref.output)
+        DORADO_BASECALL_MODIFIED(
+            run_mod,
+            experiment_list,
+            accuracy_list,
+            basecall_model_list_mod,
+            params.runControls.black_list_models,
+            dorado_mod_run_channels,
+            download_dorado_base_model
+        )
     }
 
-    // todo: edge case, different model combinations across other tools
-    /*
-        OTHER TOOLS MODIFIED BASECALLING SECTION
-    */
-    // run_selector = 0
-    if (run_selector > 0){
-
-        def fastq = Channel.empty()
+    if(run_selector>0){
         
-        filter_models = Channel.fromList(params.runControls.other_tools.values().flatten())
-                .combine(Channel.fromList(params.runControls.accuracy))
-                .map{ ver, acc -> [ select_base_model('5', acc, ver, '5mC'), 'dorado' ]}
-                .unique()
-                .ifEmpty([])
-        
-        // collect dorado models        
-        download_dorado_base_model_move = download_dorado_base_model.output
-                .combine(filter_models)
-                .filter{ it -> it[0]==it[3]}
-                .map{ it -> it[0..2]}
-                
-        // collect experiments to be run
-
-        dorado_move_run_channels = run_move
+        def basecall_model_list_base = Channel.fromList(params.runControls.other_tools.values().flatten())
             .unique()
-            .combine(Channel.fromList(params.runControls.experiments))
-            .combine(Channel.fromList(params.runControls.accuracy))
-            .combine(Channel.of('5'))
-            .unique()
-            .map{ doralias, mod, ver, dorado, exp, acc, sr -> [ select_base_model(sr, acc, ver, mod), "${sr}kHz_${acc}_${ver}", exp ] }
+            .ifEmpty { params.runControls.qc.default_model }
 
-        //
-        dorado_move_inputs = download_dorado_base_model_move
-            .map{ model_alias, dorado, base -> [ model_alias, dorado, base ]}
-            .combine(dorado_move_run_channels, by: 0)
-            .unique()
-            .map{ model_alias, dorver, base, key, exp -> [ exp, key, dorver, base ]}
+        def run_f5c     = params.runControls.other_tools.f5c.size() > 0
+        def run_f5c_stranded =  params.runControls.other_tools.f5c_stranded.size()  > 0
+        def run_rockfish = params.runControls.other_tools.rockfish.size()>0
+        def run_deepMod2_transformer = params.runControls.other_tools.deepmod2_transformer.size()>0
+        def run_deepMod2_bilstm = params.runControls.other_tools.deepmod2_bilstm.size()>0
+        def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
+        def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
+
+        def generate_fastq = (run_selector==1 || run_f5c )
         
-        dorado_move(dorado_move_inputs)
-        samtools_move_cleanse(dorado_move.output)
-        samtools_tuppled = samtools_move_cleanse.out.bam.merge( samtools_move_cleanse.out.csi )
-
-        def run_f5c = ( params.runControls.other_tools.f5c.size() > 0 || params.runControls.other_tools.f5c_stranded.size() > 0)
+        experiment_list.view()
+        basecall_model_list_base.view()
         
-        if (run_selector==1 || run_f5c ){
-            bam_to_fastq(samtools_tuppled)
-            fastq = bam_to_fastq.output
-        }
+        DORADO_BASECALL_MOVETABLE(
+            run_move,
+            experiment_list,
+            accuracy_list,
+            basecall_model_list_base,
+            download_dorado_base_model,
+            generate_fastq
+        )
 
-        // /* ROCKFISH */
-        def runRockfish = params.runControls.other_tools.rockfish.size()>0
-        if( runRockfish ){
-            setup_rockfish()
+        samtools_cleansed = DORADO_BASECALL_MOVETABLE.out.samtools_cleansed
+        fastq = DORADO_BASECALL_MOVETABLE.out.fastq
 
-            setup_rockfish.output
-                .combine(samtools_tuppled) | 
-                rockfish_call
-
-            samtools_tuppled
-                .combine(rockfish_call.output)
-                .map{ bam, csi, rfOut -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi, rfOut ] }
-                .combine( reference_map_ob, by: 0 )
-                .map{ it -> [ it[-1], *it[1..-2]] } |
-                rockfish_map_generate |
-                rockfish_intersect
-                rockfish_aggregate
-                rockfish_getfasta
-                consolidate_rockfish
+        /* ROCKFISH */
+        if(run_rockfish){
+            ROCKFISH_SUBWORKFLOW( samtools_cleansed, reference_map_ob )
         }
 
         /* DEEPOMOD2 */
-        def run_deepMod2_transformer = params.runControls.other_tools.deepmod2_transformer.size()>0
-        def run_deepMod2_bilstm = params.runControls.other_tools.deepmod2_bilstm.size()>0
-
-        if ( run_deepMod2_transformer || run_deepMod2_bilstm ){
-
-            setup_deepmod2()
-
-            deepmod2_input = samtools_tuppled
-                .map{ bam, csi -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi ]}
-                .combine(reference_map_ob, by: 0)
-                .map{ it -> [ *it[1..-3],  file(it[-1])] }
-                .combine(setup_deepmod2.output)
-                .map{ it -> [ it[-1], *it[0..-2]] }
-
-            /* DEEPOMOD2 TRANSFORMER*/
-            if ( run_deepMod2_transformer ){
-                dm2_trans_channel = deepmod2_input.combine(Channel.of('transformer'))
-                deepmod2_call_transformer(dm2_trans_channel)
-
-                deemod2_calls_transformer_tuple = deepmod2_call_transformer.out.folder
-                    .combine(Channel.of('transformer'))
-
-                deepmod2_add_ref_transformer(deemod2_calls_transformer_tuple)
-                consolidate_deepmod2_transformer(deepmod2_add_ref_transformer.output)
+        if( run_deepMod2_transformer || run_deepMod2_bilstm ){
+            if(run_deepMod2_transformer) {
+                DEEPMOD2_WORKFLOW_TRANSFORMER (
+                    samtools_cleansed,
+                    reference_map_ob,
+                    'transformer'
+                )
             }
-
-            /* DEEPOMOD2 BiLSTM*/
-            if ( run_deepMod2_bilstm ){
-                dm2_blstm_channel = deepmod2_input.combine(Channel.of('BiLSTM'))
-                deepmod2_call_bilstm(dm2_blstm_channel)
-
-                deemod2_calls_bilstm_tuple = deepmod2_call_bilstm.out.folder
-                    .combine(Channel.of('BiLSTM'))
-
-                deepmod2_add_ref_bilstm(deemod2_calls_bilstm_tuple)
-                consolidate_deepmod2_bilstm(deepmod2_add_ref_bilstm.output)
+            if(run_deepMod2_bilstm) {
+                DEEPMOD2_WORKFLOW_BILSTM (
+                    samtools_cleansed,
+                    reference_map_ob,
+                    'BiLSTM'
+                )
             }
         }
+        /* F5C */
+        if(run_f5c || run_f5c_stranded){
+            F5C_GENERAL_WORKFLOW(fastq, reference_map_ob)
+            def f5c_setup = F5C_GENERAL_WORKFLOW.out.setup_f5c
+            def f5c_call  = F5C_GENERAL_WORKFLOW.out.f5c_call
 
-        // /* F5C */
-        if( run_f5c ){
-            fastq
-                .map{ bam, csi, fq -> ["${bam.toString().split('/')[-1].split('_5kHz')[0]}_5kHz", bam, csi, fq ]}
-                .combine(reference_map_ob, by: 0)
-                .map{ key, bam, csi, fq, p5, fa -> [p5, bam, csi, fq,  key] } |
-                pod5_to_blow5                     // blow5 generation
-
-            setup_f5c |                           // install f5c if not exist
-                combine(pod5_to_blow5.output) |   // map on blow5 folders to fastq
-                f5c_idx_fastq                     // index fastq and blow5
-
-            f5c_idx_fastq.output                  // map blow5 folders and call
-                .map{ it -> ["${it[3].toString().split('/')[-1].split('_5kHz')[0]}_5kHz", *it ]}
-                .combine(reference_map_ob, by: 0)
-                .map{ it -> [ *it[1..9], file(it[-1]) ] } | f5c_call
-
-            /* F5C unstranded pipeline */
-            if(params.runControls.other_tools.f5c.size()>0){
-                f5c_call_ob  = setup_f5c.output.combine(f5c_call.output)
-                f5c_aggregate(f5c_call_ob)
-                f5c_add_fasta(f5c_aggregate.output)
-                consolidate_f5c(f5c_add_fasta.output)
+            if(run_f5c) {
+                F5C_UNSTRANDED_WORKFLOW(f5c_setup, f5c_call)
             }
-
-            /* F5C restrand pipeline */
-            if(params.runControls.other_tools.f5c_stranded.size()>0){
-                f5c_restrand(f5c_call.output)
-                f5c_call_ob  = setup_f5c.output.combine(f5c_restrand.output)
-                f5c_aggregate_stranded(f5c_call_ob)
-                f5c_add_fasta_stranded(f5c_aggregate_stranded.output)
-                consolidate_f5c_stranded(f5c_add_fasta_stranded.output)
+            if(run_f5c_stranded){
+                F5C_RESTRANDED_WORKFLOW(f5c_setup, f5c_call)
             }
         }
-    
-        /* DEEPBAM */
-        def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
-        def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
-        
-        if(run_deepBAM || run_deepPlant ){
-            bam_fn_reorder(samtools_tuppled)
+        /* DeepTools */
+        if(run_deepBAM || run_deepPlant){
+            def bam_fn_reorder = DEEPTOOLS_GENERAL_SUBWORKFLOW( samtools_cleansed )
 
+            /* DEEPBAM */
             if(run_deepBAM){
-                deepBamIn = bam_fn_reorder.output
-                    .map{ it -> [
-                        "${it.toString().split('/')[-1].split('_5kHz')[0]}_5kHz",
-                        it
-                    ] }
-                    .combine(reference_map_ob, by: 0)
-                    .combine(Channel.of(params.toolConfig.deepbam.model))
-                    .map{ key, bam, pod5, fasta, model -> [ pod5, bam, fasta, file(model) ] }
-                    
-                deepbam_call(deepBamIn) 
-                deepbam_aggregate(deepbam_call.output)
-                deepbam_rebed(deepbam_aggregate.output)
-                deepbam_consolidate(deepbam_rebed.output)
+                def deepbam_model_channel = Channel.of(params.toolConfig.deepbam.model)
+
+                DEEPBAM_SUBWORKFLOW(
+                    bam_fn_reorder,
+                    reference_map_ob,
+                    deepbam_model_channel
+                )
             }
-
-            // /* DEEP_PLANT */
+            /* DEEP_PLANT */
             if(run_deepPlant){
-                deepPlantIn = bam_fn_reorder.output
-                    .map{ it -> [
-                        "${it.toString().split('/')[-1].split('_5kHz')[0]}_5kHz",
-                        it
-                    ] }
-                    .combine(reference_map_ob, by: 0)
-                    .combine(Channel.of(params.toolConfig.deepplant.model))
-                    .map{ key, bam, pod5, fasta, model -> [ pod5, bam, fasta, file(model) ] }
+                def deepplant_model_channel = Channel.of(params.toolConfig.deepplant.model)
 
-                deepplant_call(deepPlantIn)
-                
-                deepplant_aggregate_cpg(deepplant_call.output.cpg)
-                deepplant_aggregate_chg(deepplant_call.output.chg)
-                deepplant_aggregate_chh(deepplant_call.output.chh)
-
-                deepplant_rebed_cpg(deepplant_aggregate_cpg.output)
-                deepplant_rebed_chg(deepplant_aggregate_chg.output)
-                deepplant_rebed_chh(deepplant_aggregate_chh.output)
-
-                deepplant_consolidate_cpg(deepplant_rebed_cpg.output)
-                deepplant_consolidate_chg(deepplant_rebed_chg.output)
-                deepplant_consolidate_chh(deepplant_rebed_chh.output)
+                DEEPPLANT_SUBWORKFLOW(
+                    bam_fn_reorder,
+                    reference_map_ob,
+                    deepplant_model_channel
+                )
             }
         }
-
-        if(run_qc){
-            if(params.runControls.qc.tools.nanostat==true) { nanostat(samtools_tuppled) }
-            if(params.runControls.qc.tools.nanoplot==true) { nanoplot(samtools_tuppled) }
-            if(params.runControls.qc.tools.mosdepth==true) { mosdepth(samtools_tuppled) }
+        
+        if(run_qc>0){
+            if(params.runControls.qc.tools.nanostat==true) { nanostat(samtools_cleansed) }
+            if(params.runControls.qc.tools.nanoplot==true) { nanoplot(samtools_cleansed) }
+            if(params.runControls.qc.tools.mosdepth==true) { mosdepth(samtools_cleansed) }
+            if(params.runControls.qc.tools.nanoq==true) { nanoq(fastq) }
         }
     }
 }

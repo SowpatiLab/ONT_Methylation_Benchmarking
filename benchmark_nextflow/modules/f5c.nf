@@ -111,7 +111,7 @@ process f5c_restrand {
     script:
     reference = fetch_ref("${input_file}")
     """
-        python ${projectDir}/scripts/f5c_restrand.py -i ${input_file} -r ${reference} -o ${input_file.baseName}.stranded.tsv
+        python ${projectDir}/scripts_common/f5c_restrand.py -i ${input_file} -r ${reference} -o ${input_file.baseName}.stranded.tsv
     """
 }
 
@@ -121,7 +121,7 @@ process f5c_restrand {
 //     output: tuple path(install_dir), path("merged.f5c.tsv")
 //     script:
 //     """
-//         python ${projectDir}/scripts/merge_f5c_calls.py -i ${input_files.join(' ')} -o merged.f5c.tsv
+//         python ${projectDir}/scripts_common/merge_f5c_calls.py -i ${input_files.join(' ')} -o merged.f5c.tsv
 //     """
 // }
 
@@ -210,6 +210,6 @@ process consolidate_f5c {
 
     script:
     """
-        python ${projectDir}/scripts/f5c_consolidate.py ${input_file} ${input_file.baseName}.rebed.ref.bed
+        python ${projectDir}/scripts_common/f5c_consolidate.py ${input_file} ${input_file.baseName}.std.bed
     """
 }

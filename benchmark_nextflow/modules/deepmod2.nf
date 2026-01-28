@@ -100,6 +100,6 @@ process consolidate_deepmod2 {
 
     script:
     """
-        python ${projectDir}/scripts/deepmod2_consolidate.py ${input_file} ${input_file.baseName}.std.bed ${model}
+        python ${projectDir}/scripts_common/deepmod2_consolidate.py ${input_file} ${input_file.baseName}.std.bed ${model}
     """
 }

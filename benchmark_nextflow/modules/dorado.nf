@@ -4,7 +4,6 @@ include {
     fetch_ref ;
 } from '../lib/utils.groovy'
 
-
 process install_rerio {
     label 'download'
     storeDir "${params.tooling_dir}"
@@ -93,14 +92,12 @@ process dorado_move {
     
     label 'gpu'
     label 'std_conda'
-    // conda 'bioconda::samtools==1.21'
 
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model)
 
     output:
-    path "${experiment}_${key}.bam"
-    path "${experiment}_${key}.bam.csi"
+        tuple path("${experiment}_${key}.bam"), path("${experiment}_${key}.bam.csi")
 
     script:
     reference = fetch_ref(experiment)
@@ -117,14 +114,12 @@ process dorado_mod {
 
     label 'gpu'
     label 'std_conda'
-    // conda 'bioconda::samtools==1.21'
 
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model), path(mod_model)
 
     output:
-        path "${experiment}_${key}.bam"
-        path "${experiment}_${key}.bam.csi"
+        tuple path("${experiment}_${key}.bam"), path("${experiment}_${key}.bam.csi")
 
     script:
     reference = fetch_ref(experiment)

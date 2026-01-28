@@ -21,7 +21,7 @@ process deepbam_call {
     label 'gpu'
     conda "${params.conda_dir}/envs/${params.toolConfig.deepbam.conda}"
 
-    container 'apptainer_build/ontMethylationBenchmarking.sif'
+    container '/data1/ccmb/reuben/benchmarking/bacterial_nf/apptainer_final/ontMethylationBenchmarking.sif'
     containerOptions '--nv'
 
     input: tuple path(pod5), path(bam), path(reference), path(model)
@@ -46,7 +46,7 @@ process deepplant_call {
     storeDir "tool_out/deepplant/readwise"
     label 'gpu'
 
-    container 'apptainer_build/ontMethylationBenchmarking.sif'
+    container '/data1/ccmb/reuben/benchmarking/bacterial_nf/apptainer_final/ontMethylationBenchmarking.sif'
     containerOptions '--nv'
 
     input:  tuple path(pod5), path(bam), path(reference), path(model)
@@ -87,7 +87,7 @@ process deetool_aggregate {
     script:
     aggregation_flags=params.toolConfig[which_tool("${readwise_file.baseName}", -1)].aggregation_flags
     """
-        python ${projectDir}/scripts/deepbam_aggregate.py --file_path  $readwise_file \
+        python ${projectDir}/scripts_common/deepbam_aggregate.py --file_path  $readwise_file \
             --aggregation_output ${readwise_file.baseName}.aggregated.tsv \
             $aggregation_flags
     """
@@ -128,7 +128,7 @@ process deepbam_consolidate {
     output: path "${input_file.baseName}.std.bed"
     script:
     """
-        python ${projectDir}/scripts/deeptools_consolidate.py $input_file ${input_file.baseName}.std.bed
+        python ${projectDir}/scripts_common/deeptools_consolidate.py $input_file ${input_file.baseName}.std.bed
     """
 }
 
@@ -141,6 +141,6 @@ process deepplant_consolidate {
     output: path "${input_file.baseName}.std.bed"
     script:
     """
-        python ${projectDir}/scripts/deeptools_consolidate.py $input_file ${input_file.baseName}.std.bed
+        python ${projectDir}/scripts_common/deeptools_consolidate.py $input_file ${input_file.baseName}.std.bed
     """
 }

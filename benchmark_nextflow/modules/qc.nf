@@ -19,7 +19,6 @@ process nanoplot {
 
     label "cpu"
     label 'std_conda'
-    // conda "bioconda::nanoplot==1.46.0"
 
     errorStrategy 'retry'
     maxRetries 3
@@ -34,22 +33,21 @@ process nanoplot {
     """
 }
 
-// process nanoq {
-//     publishDir "qc/nanoq", mode: "copy"
+process nanoq {
+    publishDir "qc/nanoq", mode: "copy"
 
-//     label "cpu"
-//     label 'std_conda'
-//     //conda "bioconda::nanoq==0.10.0"
+    label "cpu"
+    label 'std_conda'
 
-//     input: tuple path(input_fastq)
-//     output: 
-//         path "${input_fastq.baseName}.nanoq"
+    input: tuple path(bam), path(bam_idx), path(input_fastq)
+    output: 
+        path "${input_fastq.baseName}.nanoq"
     
-//     shell:
-//     """
-//         nanoq -s -i ${input_fastq} > ${input_fastq.baseName}.nanoq
-//     """
-// }
+    shell:
+    """
+        nanoq -s -i ${input_fastq} > ${input_fastq.baseName}.nanoq
+    """
+}
 
 process mosdepth {
     publishDir "qc/mosdepth", mode: "copy"

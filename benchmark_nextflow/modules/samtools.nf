@@ -9,12 +9,10 @@ process samtools_move_cleanse {
     // conda 'bioconda::samtools==1.21'
 
     input:
-    path input_file
-    path input_index
+        tuple path(input_file), path(input_index)
 
     output:
-    path "${input_file.baseName}.cleansed.bam", emit: bam
-    path "${input_file.baseName}.cleansed.bam.csi", emit: csi
+        tuple path("${input_file.baseName}.cleansed.bam"), path("${input_file.baseName}.cleansed.bam.csi")
 
     script:
     chroms = fetchStdChromosomes(input_file)
@@ -27,15 +25,13 @@ process samtools_mod_cleanse {
     storeDir "bam/sorted_mod_cleansed"
 
     label 'std_conda'
-    // conda 'bioconda::samtools==1.21'
 
     input:
     path input_file
     path input_index
 
     output:
-    path "${input_file.baseName}.cleansed.bam", emit: bam
-    path "${input_file.baseName}.cleansed.bam.csi", emit: csi
+    tuple path("${input_file.baseName}.cleansed.bam"), path("${input_file.baseName}.cleansed.bam.csi")
 
     script:
     chroms = fetchStdChromosomes(input_file)

@@ -16,9 +16,9 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [Mokit](https://github.com/nanoporetech/modkit) - v0.5.1-rc1<br/>
 
 The current workflow can be configured to run with existing working installations of said tools, else if not detected, the tools will be installed by the workflow in the directory
-mentioned in the [config.json](../config.json) file.
+mentioned in the [config.yaml](../config.yaml) file.
 
-<b>Note:</b> At the time of writing, DeepBAM and DeepPlant do not provide any precompiled versions of their software and hence they would still have to be installed manually, and the location to their respective executable will have to be provided in the [config.json](../config.json) file.
+<b>Note:</b> At the time of writing, DeepBAM and DeepPlant do not provide any precompiled versions of their software and hence they would still have to be installed manually, and the location to their respective executable will have to be provided in the [config.yaml](../config.yaml) file.
 
 
 ### Pre-requisites to run the workflow 
@@ -62,7 +62,7 @@ Folder names must contain the '_5kHz' suffix, this enables nextflow to exclude f
                                                           + MSssI treated
 </pre>
 
-These names can then be included under the "runControls" key in [config.json](../config.json).
+These names can then be included under the "runControls" key in [config.yaml](../config.yaml).
 
 <pre>
 {
@@ -169,7 +169,7 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 
 ```
     nextflow run benchmark_nextflow \
-        -param-dir config.json
+        -param-file config.yaml
 ```
 
 ## Running the workflow with apptainer
@@ -188,7 +188,7 @@ we recommend building a containerised image with apptainer with the
 
 ```
     nextflow run benchmark_nextflow \
-        -param-dir config.json \
+        -param-file config.yaml \
         -with-apptainer
 ```
 
@@ -227,6 +227,6 @@ we recommend building a containerised image with apptainer with the
 │   ├── rockfish
 │   └── rockfishmodels
 ├── benchmark_nextflow         # nextflow workflow is contained here
-├── config.json
+├── config.yaml
 └── references.yaml
 ```
