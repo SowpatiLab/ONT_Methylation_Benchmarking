@@ -18,20 +18,6 @@ rule all:
         DeepMOD2_transformer=fetch_deepmod2_transformer_list(),
         DeepMOD2_bilstm=fetch_deepmod2_bilstm_list(),
 
-def download_dorado_version(wildcards, input, output):
-    print(subpath(output, basename=True))
-    return '/data1/ccmb/reuben/benchmarking/bacterial_nf/tooling/dorado/dorado111'
-
-# rule download_base_model:
-#     output: 
-#        directory( DORADO_MODELS + "/{dorado_model, (rna|dna)_r10.*}")
-#     threads: 10
-#     shell: """
-#         /data1/tools/dorado/dorado111/bin/dorado download \
-#             --model {wildcards.dorado_model} \
-#             --models-directory {DORADO_MODELS}
-#     """
-
 for mode in ['move', 'mod']:
     # for sr, ver in  VERSIONS:
     def dorado_setup():

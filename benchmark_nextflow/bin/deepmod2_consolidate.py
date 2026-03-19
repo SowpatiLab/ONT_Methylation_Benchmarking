@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import polars as pl
 from pathlib import Path
 import re, sys

@@ -6,10 +6,9 @@ include {
 process setup_rockfish {
     storeDir "${params.tooling_dir}"
 
-    output:
-    tuple path("${params.toolConfig.rockfish.install_dir}"), path("${params.toolConfig.rockfish.model_dir}")
+    output: path("${params.toolConfig.rockfish.install_dir}"), emit: 'exec'
 
-    shell:
+    script:
     """
         source "\$(conda info --base)/etc/profile.d/conda.sh"
 
@@ -17,37 +16,48 @@ process setup_rockfish {
         conda activate "${params.toolConfig.rockfish.conda}"
         git clone -b r10.4.1 https://github.com/lbcb-sci/rockfish.git --single-branch "${params.toolConfig.rockfish.install_dir}"
         pip install --extra-index-url https://download.pytorch.org/whl/cu118 ./${params.toolConfig.rockfish.install_dir}/
-        
-        [ ! -d "${params.toolConfig.rockfish.model_dir}" ] && mkdir -p "${params.toolConfig.rockfish.model_dir}"
-        rockfish download -m 5kHz -s "${params.toolConfig.rockfish.model_dir}"
+    """
+}
+
+process download_rockfish_model {
+    storeDir "${params.tooling_dir}/${params.toolConfig.rockfish.model_dir}"
+    label 'cpu'
+    label 'rockfish'
+
+    input:  val exec
+    output: path "${params.toolConfig.rockfish.model}"
+
+    script:
+    """
+        ${params.toolConfig.rockfish.executable} download -m 5kHz -s .
     """
 }
 
 process rockfish_call {
-    storeDir "tool_out/rockfish"
+    publishDir "tool_out/rockfish"
     label 'gpu'
     label 'rockfish'
 
-    conda "${params.conda_dir}/envs/${params.toolConfig.rockfish.conda}"
+    // conda "${params.conda_dir}/envs/${params.toolConfig.rockfish.conda}"
 
     input:
-    tuple path(pod5), path(rockfish), path(rockfishmodels), path(input_bam), path(input_bam_idx)
+    tuple path(pod5), val(rockfish), path(rockfishmodel), path(input_bam), path(input_bam_idx)
 
     output:
     path "${input_bam.baseName}.tsv"
 
-    shell:
+    script:
     """
         rockfish inference \
             -i ${pod5} --bam_path ${input_bam} \
-            --model_path "${rockfishmodels}/${params.toolConfig.rockfish.model}" \
+            --model_path ${rockfishmodel} \
             -t ${task.cpus} ${params.toolConfig.rockfish.call_flags};
         mv predictions.tsv ${input_bam.baseName}.tsv
     """
 }
 
 process rockfish_map_generate {
-    storeDir "tool_out/rockfish/readwise"
+    publishDir "tool_out/rockfish/readwise"
     
     label 'cpu'
     label 'rockfish'
@@ -59,9 +69,15 @@ process rockfish_map_generate {
     path "${input_bam.baseName}.bam_ref_map.tsv"
     path "${predicton_file}"
 
-    shell:
+    script:
+    isContainerised = workflow.containerEngine!=null ? "containerised" : "null"
     """
-        python ${projectDir}/scripts_common/rockfish_extract_ref_pos.py --workers ${task.cpus} ${input_bam} ${reference} > ${input_bam.baseName}.bam_ref_map.tsv
+        if [[ "${isContainerised}" == "containerised" ]]; 
+        then
+            eval "\$(micromamba shell hook --shell bash)"
+            micromamba activate rockfish
+        fi
+        rockfish_extract_ref_pos.py --workers ${task.cpus} ${input_bam} ${reference} > ${input_bam.baseName}.bam_ref_map.tsv
     """
 }
 
@@ -80,7 +96,7 @@ process rockfish_intersect {
 
     script:
     """
-        python ${projectDir}/scripts_common/rockfish_intersect.py -i ${prediction_file} -r ${ref_map} -o "${prediction_file.baseName}.intercept.tsv"
+        rockfish_intersect.py -i ${prediction_file} -r ${ref_map} -o "${prediction_file.baseName}.intercept.tsv"
     """
 }
 
@@ -98,7 +114,7 @@ process rockfish_aggregate {
 
     script:
     """
-        python ${projectDir}/scripts_common/rockfish_aggregate.py -i ${read_file_mapped} -o "${read_file_mapped.baseName}.aggregated.tsv"
+        rockfish_aggregate.py -i ${read_file_mapped} -o "${read_file_mapped.baseName}.aggregated.tsv"
     """
 }
 
@@ -110,21 +126,17 @@ process rockfish_getfasta {
     // conda 'bioconda::bedtools==2.30.0'
 
     input:
-    path infile
+    tuple path(infile), path(reference), path(faidx), path(genome)
 
     output:
     path "${infile.baseName}.rebed.ref.tsv"
 
     script:
-    reference = fetch_ref("${infile}")
     """
-        [ ! -d ${reference}.fai ] && samtools faidx -@ ${task.cpus} ${reference}
-        [ ! -d ${reference}.genome ] && cut -f 1-2 ${reference}.fai > ${reference}.genome
-
         tmp=\$(mktemp /tmp/rockfish_bed_fasta.XXXX);
         bedtools getfasta -fi ${reference} -bed ${infile} -bedOut | \
             awk 'BEGIN{OFS="\\t"} { if(toupper(\$7)=="C") \$7="+"; else if(toupper(\$7)=="G") \$7="-"; print \$1,\$2,\$3,\$5+\$6,".",\$7,\$5,\$6,\$4 }' > \$tmp;
-        bedtools slop -g ${reference}.genome -l 5 -r 11 -s -i \$tmp | \
+        bedtools slop -g ${genome} -l 5 -r 11 -s -i \$tmp | \
             bedtools getfasta -s -fi ${reference} -bed - -tab | cut -f 2 | paste \$tmp - > "${infile.baseName}.rebed.ref.tsv";
         
         rm \$tmp;
@@ -144,6 +156,6 @@ process consolidate_rockfish {
 
     script:
     """
-        python ${projectDir}/scripts_common/rockfish_consolidate.py ${input_file} ${input_file.baseName}.std.bed
+        rockfish_consolidate.py ${input_file} ${input_file.baseName}.std.bed
     """
 }

@@ -3,7 +3,7 @@ include {
 } from '../lib/utils.groovy'
 
 process samtools_move_cleanse {
-    storeDir "bam/sorted_move_cleansed"
+    publishDir "bam/sorted_move_cleansed"
 
     label 'std_conda'
     // conda 'bioconda::samtools==1.21'
@@ -22,13 +22,11 @@ process samtools_move_cleanse {
 }
 
 process samtools_mod_cleanse {
-    storeDir "bam/sorted_mod_cleansed"
+    publishDir "bam/sorted_mod_cleansed"
 
     label 'std_conda'
 
-    input:
-    path input_file
-    path input_index
+    input: tuple path(input_file), path(input_index)
 
     output:
     tuple path("${input_file.baseName}.cleansed.bam"), path("${input_file.baseName}.cleansed.bam.csi")

@@ -7,7 +7,6 @@ rule deepbam_call:
     priority: 0
     resources: gpu=1
     conda: config['toolConfig']['deepbam']['conda']
-    container: "/data1/ccmb/reuben/benchmarking/bacterial_nf/apptainer_final/ontMethylationBenchmarking.sif"
     log: "log/deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     params: 
         ref=getRef,
@@ -42,7 +41,6 @@ rule deepbam_rebed:
             awk 'BEGIN{{OFS="\\t"}} {{ if(toupper($7)=="C") $7="+"; else if(toupper($7)=="G") $7="-"; print $1,$2,$3,$5+$6,".",$7,$5,$6,$4 }}' > {output};
     ''')
 
-# //todo: combine addref and rebed 
 rule deepbam_addfasta:
     input:  
         bed="tool_out/deepbam/rebed/{experiment}_{sr}kHz_{acc}_v{ver}.deepbam.aggregated.rebed.tsv",

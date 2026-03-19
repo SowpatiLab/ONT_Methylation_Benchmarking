@@ -23,13 +23,17 @@ mentioned in the [config.yaml](../config.yaml) file.
 
 ### Pre-requisites to run the workflow 
 1. [Nextflow](https://www.Nextflow.io/docs/latest/install.html)
-2. [Anaconda](https://www.anaconda.com/download)
+
+and any or all of these:
+2. [anaconda](https://www.anaconda.com/download)
+3. [docker](https://www.docker.com/)
+4. [apptainer](https://apptainer.org/)
 
 ### Dataset and naming
 
 ```
 {
-    "pod5dir": "datasets/pod5"
+    "pod5dir": "pod5"
 }
 ```
 #### File name nomenclature rule:
@@ -129,6 +133,14 @@ The references for each species used must be included in the [references.yaml](.
         Tdenticola: ['NC_002967.9']
 ```
 
+
+note: before the nextflow workflow is run, all reference files used are required to be indexed and their correspinding genome files have to be generated like so:
+
+```
+    samtools faidx reference_file.fa
+    cut -f 1,2 reference_file.fa.fai >  reference_file.genome
+```
+
 ### Tooling setup
 
 The 'toolConfig' key contains a list of all the tools that the workflow can autoconfigure, including the conda environments names. Alternatively if any of these tools are already installed on your machine you can point Nextflow to those directories, but we recommend allowing Nextflow to install it fresh for the sake of starting from a fresh point.
@@ -161,36 +173,32 @@ The following keys need to be setup:
 | model_dir | This is where the models for the given tool will be downloaded | 
 | model | Model name |
 | call_flags | this can be extended to add new arguments to a give tool |
-    
-    
+
+## Running the workflow with docker
+Since certian tools like DeepBAM and DeepPlant require sudo permissions to be built from source, 
+we recommend building a containerised image with docker, which can be built using the included
+[dockerfile](../dockerfile) in this repo for reproducibility sake.
+
+### Setting up the docker image
+We recommend installing [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) so that docker is able to access
+the GPUs
+
+```bash
+
+    bash ../docker_build_assets # fetch build dependencies
+    docker build -t sowpati/ont-methylation-benchmarking:latest .
+```
+
 ## Running the workflow 
 
 Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 
 ```
     nextflow run benchmark_nextflow \
-        -param-file config.yaml
-```
-
-## Running the workflow with apptainer
-Since DeepBAM and DeepPlant require sudo permissions to be installed, 
-we recommend building a containerised image with apptainer with the 
-[build config](../apptainer_setup.def) included in this repo for reproducibility sake.
-
-### Setting up the apptainer image
-
-```bash
-    # from this directory:
-    [ ! -d ../apptainer_build ] && mkdir ../apptainer_build;
-    sudo apptainer build apptainer_build/ontMethylationBenchmarking.sif ../apptainer_setup.def
-```
-### running with apptainer
-
-```
-    nextflow run benchmark_nextflow \
         -param-file config.yaml \
-        -with-apptainer
+        -profile docker
 ```
+
 
 ## Final folder structure 
 ```

@@ -1,33 +1,36 @@
 
-refLookup: references.yaml
-pod5dir: /data1/ccmb/reuben/benchmarking/bacterial/datasets/pod5
+references: references.yaml
+pod5dir: pod5
 filterChromosomes: true
 tooling_dir: tooling
+output_dir: .
 
 runControls: 
-    experiments: [ HPJ99_WT ]
+    experiments: [ 
+        Ecoli_WT, Ecoli_DM, Ecoli_DM_MSssI, HP26695_WT, HP26695_WGA, HPJ99_WT, Tdenticola_WT, Avariabilis_WT,
+    ]
     runs: []
-    accuracy: [ hac ]
+    accuracy: [ sup,hac ]
     black_list_models : [5kHz_hac_v4r1_4mC]
     dorado_mod_models: 
-      5mC:  []
-      5mCG: []
-      6mA:  []
-      4mC:  []
+      5mC:  [v4r1,v5r1,v5r3,v5.2r2]
+      5mCG: [v4r1,v5r1,v5r3,v5.2r2]
+      6mA:  [v4r1,v4r2,v5r1,v5r3,v5.2r1]
+      4mC:  [v4r1,v5r1,v5r3,v5.2r1]
     other_tools: 
-      rockfish: []
-      deepmod2_transformer: []
-      deepmod2_bilstm: []
-      f5c: []
-      f5c_stranded: []
-      deepbam:   []
-      deepplant: []
+      rockfish: [v5r3]
+      deepmod2_transformer: [v5r3]
+      deepmod2_bilstm: [v5r3]
+      f5c: [v5r3]
+      f5c_stranded: [v5r3]
+      deepbam:   [v5r3]
+      deepplant: [v5r3]
     qc: 
       default_model   : v5r3
       tools: 
-        nanostat: false
-        nanoplot: false
-        mosdepth: false
+        nanostat: true
+        nanoplot: true
+        mosdepth: true
         nanoq: true
 
 # TOOL RUN/SETUP CONFIGURATION
@@ -48,12 +51,12 @@ toolConfig:
   rockfish: 
     install_dir: rockfish
     executable: rockfish
-    conda: rockfish_test_nf
-    model_dir: rockfishmodels
+    conda: rockfish
+    model_dir: rockfish_models
     model: rf_5kHz.ckpt
     call_flags: -b 8192 -d 0
-  deepmod2: 
-    install_dir: DeepMod2
+  deepmod2:
+    install_dir: deepmod2
     executable: deepmod2
     conda: deepmod2
     call_flags: --device=cuda --batch_size 2048
@@ -63,17 +66,19 @@ toolConfig:
     version: v1.5
     call_flags: --cuda-dev-id 0 -x hpc-high -K 2048 -B 40.0M --pore r10
   deepplant: 
-    install_dir: /data1/tools/DeepPlant
+    install_dir: DeepPlant
     executable: build/DeepPlant
     conda: DeepPlant 
-    model: /data1/tools/DeepPlant/model/bilstm/
+    model_dir: DeepPlant_models
+    model: bilstm/
     call_flags: 51 51 13 8 4 2048
     aggregation_flags: --threshold 0.5
   deepbam: 
-    install_dir: /data1/tools/DeepBAM
+    install_dir: tools/DeepBAM
     executable: cpp/build/DeepBAM
     conda: DeepBAM
-    model: /data1/tools/DeepBAM/traced_script_module/LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt
+    model_dir: DeepBAM_models
+    model: LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt
     call_flags: 51 8 4 2048 CG 0
     aggregation_flags: --threshold 0.5
   samtools: 
@@ -81,6 +86,8 @@ toolConfig:
   modkit: 
     executable: modkit
     version: 0.5.1-rc1
+
+default_conda_env: snakemake
 
 timit: true
 logit: true

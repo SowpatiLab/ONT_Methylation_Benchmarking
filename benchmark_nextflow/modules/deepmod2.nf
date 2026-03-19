@@ -12,11 +12,14 @@ process setup_deepmod2 {
     output:
     path "${params.toolConfig.deepmod2.install_dir}"
 
-    shell:
+    script:
     """
         source "\$(conda info --base)/etc/profile.d/conda.sh"
 
         git clone https://github.com/WGLab/DeepMod2.git "${params.toolConfig.deepmod2.install_dir}"
+        cat ${params.toolConfig.deepmod2.install_dir}/src/detect.py \
+            | perl -pe 's/^(from ont_fast5_api.*)/#\$1/' > tmp.txt
+        cat tmp.txt > ${params.toolConfig.deepmod2.install_dir}/src/detect.py
 
         conda env create \
             -f "${params.toolConfig.deepmod2.install_dir}"/environment.yml \
@@ -32,23 +35,23 @@ process setup_deepmod2 {
 }
 
 process deepmod2_call {
-    storeDir "tool_out/deepmod2"
+    publishDir "tool_out/deepmod2"
 
     label 'gpu' 
     label 'deepmod2'
 
     input:
-    tuple path(deepmod2_dir), path(input_bam), path(input_bam_idx), path(reference), val(model)
+    tuple val(deepmod2_dir), path(input_bam), path(input_bam_idx), path(reference), val(model)
 
     output:
     path "${input_bam.baseName}", emit: folder
 
     script:
     model_path = fetch_deepmod2_model("${input_bam}", "${model}")
-    reference = fetch_ref("${input_bam}")
-    pod5 = fetch_pod5_loc("${input_bam}")
+    pod5 = file(fetch_pod5_loc("${input_bam}"))
+    exec = workflow.containerEngine!=null ? "deepmod2" : "python ${deepmod2_dir}/deepmod2"
     """
-        python ${deepmod2_dir}/deepmod2 detect \
+        ${exec} detect \
             --bam ${input_bam} \
             --input ${pod5} \
             --model ${model_path} \
@@ -67,21 +70,17 @@ process deepmod2_add_ref {
     label 'cpu'
 
     input:
-    tuple path(input_folder), val(model)
+    tuple path(input_folder), val(model), path(reference), path(faidx), path(genome)
 
     output:
     tuple path("${input_folder}_${model}.deepmod2.aggregated.rebed.ref.tsv"), val(model)
 
     script:
-    reference = fetch_ref("${input_folder}")
     """
-        [ ! -d ${reference}.fai ] && samtools faidx -@ ${task.cpus} ${reference}
-        [ ! -d ${reference}.genome ] && cut -f 1-2 ${reference}.fai > ${reference}.genome
-
         tmp=\$(mktemp /tmp/deepmod2_metadata.XXXX);
         sed '1d' ${input_folder}/output.per_site | awk 'BEGIN{OFS="\\t"} {print \$1,\$2,\$3,\$6,\$5,\$4,\$7,\$8,\$9}' > \$tmp;
 
-        bedtools slop -g ${reference}.genome -l 5 -r 11 -i \$tmp -s | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > "${input_folder}_${model}.deepmod2.aggregated.rebed.ref.tsv"
+        bedtools slop -g ${genome} -l 5 -r 11 -i \$tmp -s | bedtools getfasta -fi ${reference} -bed - -tab -s | cut -f 2 | paste \$tmp - > "${input_folder}_${model}.deepmod2.aggregated.rebed.ref.tsv"
         rm \$tmp
     """
 }
@@ -100,6 +99,6 @@ process consolidate_deepmod2 {
 
     script:
     """
-        python ${projectDir}/scripts_common/deepmod2_consolidate.py ${input_file} ${input_file.baseName}.std.bed ${model}
+        deepmod2_consolidate.py ${input_file} ${input_file.baseName}.std.bed ${model}
     """
 }

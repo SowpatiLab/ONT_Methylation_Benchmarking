@@ -1,7 +1,7 @@
 // general
+reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
 
 def fetch_ref(experiment){
-    reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.refLookup).text)
     return reference_map['references'][experiment.split('_')[0]]
 }
 
@@ -123,7 +123,21 @@ def fetchStdChromosomes(infile) {
     if (!params.filterChromosomes){
         return ""
     } else {
-        reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.refLookup).text)
+        reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
         return reference_map['std_chroms']["${infile}".split('_')[0]].join(' ')
     }
+}
+
+
+def attachReferenceFiles(channel, refMapOb) { 
+    return channel
+        .map{ bed -> [ 
+            bed, refMapOb['references'][bed.baseName.split('_')[0]],
+        ]}
+        .map{ bed, ref -> [
+            bed, 
+            file(ref),
+            file(ref.replaceFirst(/\.fa*$/, '.fa.fai')),
+            file(ref.replaceFirst(/\.fa*$/, '.genome'))
+        ]} 
 }

@@ -1,0 +1,13 @@
+work
+benchmark_nextflow
+benchmark_snakemake
+.git
+example
+plotting_scripts
+processing_scripts
+.config.yaml
+docker_build.sh
+LICENSE
+README.md
+references.yaml
+tutotial.md

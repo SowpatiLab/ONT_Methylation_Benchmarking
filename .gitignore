@@ -1,0 +1,4 @@
+docker_build_assets
+.vscode
+.nextflow
+.snakemake

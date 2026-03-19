@@ -28,13 +28,13 @@ def read_file_to_dict(file_path, t):
             else:
                 result_dict[key] = [me]
                 count_dict[key] = {'count': 1, 'methy': me}
-    # reuben: result dict: a ref positions -> methylated read tally
-    # reuben: count dict : keeps counts of coverage and M values
+    # rjmat97: result dict: a ref positions -> methylated read tally
+    # rjmat97: count dict : keeps counts of coverage and M values
     return result_dict, count_dict
 
 def filter_data(file_path, t):
-    # reuben: this sections says its meant for filtering probabilities
-    # reuben: but the way it's implemented it woudlnt filter anything
+    # rjmat97: this sections says its meant for filtering probabilities
+    # rjmat97: but the way it's implemented it woudlnt filter anything
     df = pd.read_csv(file_path, sep='\t')
     df_filtered = df[(df.iloc[:, 6] < 1-t) | (df.iloc[:, 6] >= t)]
     

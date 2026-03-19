@@ -30,7 +30,7 @@ include {
 
 workflow {
 
-    reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.refLookup).text)
+    def reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
     def reference_map_ob = Channel.fromList(params.runControls.experiments)
                 .combine(Channel.of(params.pod5dir))
                 .map{ p5, dir -> [ 
@@ -38,7 +38,7 @@ workflow {
                     file("${dir}/${p5}_5kHz"), 
                     file(reference_map['references'][p5.split('_')[0]])
                 ]}
-
+    
     mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
 
     def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
@@ -47,11 +47,11 @@ workflow {
 
     models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
     models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
-    
+
     // if qc is activate d set default model to v5r3
     models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
     model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
-
+    
     // create a model lookup for later
     model_setup = Channel
         .from(model_lookup_all)
@@ -64,11 +64,13 @@ workflow {
     install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
     dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
 
+
     /* DORADO SETUP */
     // // install dorado if not exist
     // // check required models and determine which dorado versions to download
-    DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
     
+    DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
+
     run_mod = DORADO_SETUP.out.run_mod
     run_move = DORADO_SETUP.out.run_move
     dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
@@ -79,6 +81,7 @@ workflow {
         def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
         
         DORADO_BASECALL_MODIFIED(
+            reference_map,
             run_mod,
             experiment_list,
             accuracy_list,
@@ -103,10 +106,7 @@ workflow {
         def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
         def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
 
-        def generate_fastq = (run_selector==1 || run_f5c )
-        
-        experiment_list.view()
-        basecall_model_list_base.view()
+        def generate_fastq = ( run_selector==1 || run_f5c || run_f5c_stranded )
         
         DORADO_BASECALL_MOVETABLE(
             run_move,
@@ -122,13 +122,14 @@ workflow {
 
         /* ROCKFISH */
         if(run_rockfish){
-            ROCKFISH_SUBWORKFLOW( samtools_cleansed, reference_map_ob )
+            ROCKFISH_SUBWORKFLOW( reference_map, samtools_cleansed, reference_map_ob )
         }
 
         /* DEEPOMOD2 */
         if( run_deepMod2_transformer || run_deepMod2_bilstm ){
             if(run_deepMod2_transformer) {
                 DEEPMOD2_WORKFLOW_TRANSFORMER (
+                    reference_map,
                     samtools_cleansed,
                     reference_map_ob,
                     'transformer'
@@ -136,6 +137,7 @@ workflow {
             }
             if(run_deepMod2_bilstm) {
                 DEEPMOD2_WORKFLOW_BILSTM (
+                    reference_map,
                     samtools_cleansed,
                     reference_map_ob,
                     'BiLSTM'
@@ -149,10 +151,10 @@ workflow {
             def f5c_call  = F5C_GENERAL_WORKFLOW.out.f5c_call
 
             if(run_f5c) {
-                F5C_UNSTRANDED_WORKFLOW(f5c_setup, f5c_call)
+                F5C_UNSTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
             }
             if(run_f5c_stranded){
-                F5C_RESTRANDED_WORKFLOW(f5c_setup, f5c_call)
+                F5C_RESTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
             }
         }
         /* DeepTools */
@@ -161,22 +163,18 @@ workflow {
 
             /* DEEPBAM */
             if(run_deepBAM){
-                def deepbam_model_channel = Channel.of(params.toolConfig.deepbam.model)
-
                 DEEPBAM_SUBWORKFLOW(
+                    reference_map,
                     bam_fn_reorder,
-                    reference_map_ob,
-                    deepbam_model_channel
+                    reference_map_ob
                 )
             }
             /* DEEP_PLANT */
             if(run_deepPlant){
-                def deepplant_model_channel = Channel.of(params.toolConfig.deepplant.model)
-
                 DEEPPLANT_SUBWORKFLOW(
+                    reference_map,
                     bam_fn_reorder,
                     reference_map_ob,
-                    deepplant_model_channel
                 )
             }
         }

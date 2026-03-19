@@ -11,11 +11,14 @@ include {
 include {
     select_base_model;
     select_mod_model;
+    fetch_ref ;
 } from '../lib/utils.groovy'
 
 include { samtools_move_cleanse ; samtools_mod_cleanse } from '../modules/samtools.nf'
 include { install_modkit; modkit_pileup ; modkit_add_ref ; standardise_dorado } from '../modules/modkit.nf'
 include { bam_to_fastq } from '../modules/f5c.nf'
+
+include { attachReferenceFiles } from '../lib/utils.groovy'
 
 workflow DORADO_SETUP {
     take:
@@ -26,9 +29,16 @@ workflow DORADO_SETUP {
         dorver_nam_aliases_ch
 
     main:
-        install_dorado(install_versionso_ch) // install dorado versions
-        install_dorado_versions = install_dorado.output
-            .map { d -> [dorver_nam_aliases_ch["$d.baseName"], d] }
+        if(workflow.containerEngine!=null){
+            // if containerised
+            install_dorado_versions = install_versionso_ch
+                .map { d -> [d, d] }
+        } else {
+            // if not installed, install dorado
+            install_dorado(install_versionso_ch)
+            install_dorado_versions = install_dorado.output
+                .map { d -> [dorver_nam_aliases_ch["$d.baseName"], d] }
+        }
 
         run_all  = model_setup_ch
                         .combine(install_dorado_versions, by: 0)
@@ -72,6 +82,7 @@ workflow DORADO_SETUP {
 
 workflow DORADO_BASECALL_MODIFIED {
     take:
+        reference_map_ch
         run_mod_ch
         experiment_list_ch
         accuracy_list_ch
@@ -81,6 +92,8 @@ workflow DORADO_BASECALL_MODIFIED {
         downloaded_base_models_ch
     main:
         // setting up the input for mod model download
+        def IS_CONTAINERISED = workflow.containerEngine!=null
+
         mod_models = run_mod_ch
             .combine(experiment_list_ch)
             .combine(accuracy_list_ch)
@@ -106,17 +119,25 @@ workflow DORADO_BASECALL_MODIFIED {
         def rerio_models = Channel.empty()
 
         mod_models.rerio.ifEmpty([])
-        install_rerio()  // downalod rerio modification models
+        rerio_exec = Channel.empty()
+
+        if(workflow.containerEngine!=null){
+            rerio_exec = Channel.of('rerio')
+        } else {
+            install_rerio()
+            rerio_exec = install_rerio.output  // downalod rerio modification models
+        }
+
         rerio_models = mod_models.rerio
             .map{ baseAlias, modAlias, mod, dorado ->  [ baseAlias, modAlias, mod, dorado ]}
-            .combine(install_rerio.output)
+            .combine(rerio_exec)
 
         rerio_models = download_rerio_models(rerio_models)
         
         all_mod_models =  rerio_models
             .mix(download_dorado_mod_models.output)
         
-        accuracy_list_ch.view()
+        // accuracy_list_ch.view()
 
         filter_models = full_model_list_ch
             .combine(accuracy_list_ch)
@@ -134,29 +155,28 @@ workflow DORADO_BASECALL_MODIFIED {
             .map{ model_alias, dorado, base, key, mod -> [ key, dorado, base, mod ]}
             .combine(dorado_mod_run_ch, by: 0)
             .unique()
-            .map{ key, dorver, base, mod, exp -> [exp, key, dorver, base, mod]}
+            .map{ key, dorver, base, mod, exp -> [exp, key, dorver, base, mod, file("${params.pod5dir}/${exp}_5kHz"),  file(fetch_ref(exp))]}
 
         // mod basecall stage
         dorado_mod(dorado_mod_inputs)
         samtools_mod_cleanse(dorado_mod.output)
-
-        install_modkit()
-        mokit_pileup_in = samtools_mod_cleanse.out.bam
-            .merge(samtools_mod_cleanse.out.csi)
-
-        mokit_pileup_in = install_modkit.output
-            .combine(mokit_pileup_in)
-            
+        
+        def modkit_exec = Channel.empty()
+        if(IS_CONTAINERISED){
+            modkit_exec = Channel.of('modkit')
+        }else{
+            install_modkit()
+            modkit_exec = install_modkit.output
+        }
+        
+        mokit_pileup_in = modkit_exec
+            .combine(samtools_mod_cleanse.output)
 
         modkit_pileup(mokit_pileup_in)
-        modkit_add_ref(modkit_pileup.output)
-        standardise_dorado(modkit_add_ref.output)
         
-    // emit:
-    //     dorado_mod = dorado_mod.output
-    //     modkit_pileup = modkit_pileup.output
-    //     modkit_add_ref = modkit_add_ref.output
-    //     standardise_dorado = standardise_dorado.output
+        attachReferenceFiles(modkit_pileup.output, reference_map_ch) | 
+            modkit_add_ref
+            standardise_dorado(modkit_add_ref.output)
 }
 
 
@@ -181,8 +201,9 @@ workflow DORADO_BASECALL_MOVETABLE {
         download_dorado_base_model_move = downloaded_base_models_ch
                 .combine(filter_models)
                 .filter{ it -> it[0]==it[3]}
-                .map{ it -> it[0..2]}
-
+                .map{ it -> it[0..2] }
+                // .map{ it -> [*it[0..2], file("${params.pod5dir}/${exp}_5kHz"),  file(fetch_ref(exp))]}
+        
         // collect experiments to be run
         dorado_move_run_channels = run_move_ch
             .unique()
@@ -196,11 +217,10 @@ workflow DORADO_BASECALL_MOVETABLE {
             .map{ model_alias, dorado, base -> [ model_alias, dorado, base ]}
             .combine(dorado_move_run_channels, by: 0)
             .unique()
-            .map{ model_alias, dorver, base, key, exp -> [ exp, key, dorver, base ]}
+            .map{ model_alias, dorver, base, key, exp -> [ exp, key, dorver, base, file("${params.pod5dir}/${exp}_5kHz"),  file(fetch_ref(exp)) ]}
         
         dorado_move(dorado_move_inputs)
         samtools_move_cleanse(dorado_move.output)
-        // samtools_tuppled = samtools_move_cleanse.out.bam.merge( samtools_move_cleanse.out.csi )
 
         if(generate_fastq_flag){
             bam_to_fastq(samtools_move_cleanse.output)

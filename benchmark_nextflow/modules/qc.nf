@@ -8,7 +8,7 @@ process nanostat {
     output: 
         path "${input_bam.baseName}.nanostat"
     
-    shell:
+    script:
     """
         NanoStat -t ${task.cpus} --bam ${input_bam} > ${input_bam.baseName}.nanostat
     """
@@ -27,7 +27,7 @@ process nanoplot {
     output: 
         path "${input_bam.baseName}"
     
-    shell:
+    script:
     """
         NanoPlot -t ${task.cpus} --no_static --only-report --minqual 0 --bam ${input_bam} --raw --tsv_stats -o ${input_bam.baseName}
     """
@@ -43,7 +43,7 @@ process nanoq {
     output: 
         path "${input_fastq.baseName}.nanoq"
     
-    shell:
+    script:
     """
         nanoq -s -i ${input_fastq} > ${input_fastq.baseName}.nanoq
     """
@@ -58,7 +58,7 @@ process mosdepth {
     output: 
         path "${input_bam.baseName}"
     
-    shell:
+    script:
     """
         mkdir ${input_bam.baseName}
         mosdepth -t ${task.cpus} ${input_bam.baseName}/${input_bam.baseName} ${input_bam}

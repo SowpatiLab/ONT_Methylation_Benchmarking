@@ -22,8 +22,7 @@ From: nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
     bash /home/miniconda.sh -b -u -p /home/miniconda3
     . /home/miniconda3/bin/activate base
     
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+    conda tos accept
 
     ## HSTlib setup
     wget https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2

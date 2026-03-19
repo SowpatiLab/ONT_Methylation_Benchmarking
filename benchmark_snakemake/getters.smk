@@ -1,5 +1,5 @@
 configfile: 'config.json'
-configfile: config["refLookup"]
+configfile: config["references"]
 
 Path(f"log").mkdir(parents=True, exist_ok=True)
 
