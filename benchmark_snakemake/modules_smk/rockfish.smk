@@ -1,5 +1,5 @@
 rule setup_rockfish:
-    output: "{tooling}/setup_status/rockfish.status"
+    output: config['output_dir'] + "/" + "{tooling}/setup_status/rockfish.status"
     params: 
         conda_env=config['toolConfig']['rockfish']['conda'],
         model=subpath(config['toolConfig']['rockfish']['model'], parent=True)
@@ -20,27 +20,42 @@ rule setup_rockfish:
         echo rockfish model dir: {params.model} >> {output}
     """
 
+rule download_rockfish_model:
+    output: ROCKFISH_MODEL
+    conda: config['toolConfig']['rockfish']['conda']
+    params:
+        save_dir=subpath(output[0], parent=True),
+        script_dir=Path(workflow.basedir) / "scripts_common"
+    shell: """
+        [ ! -d {params.save_dir} ] && mkdir -p {params.save_dir} ;
+        micromamba run -n rockfish python {params.script_dir}/rockfish_model_dl.py download -m 5kHz -s {params.save_dir}
+    """
+    ## the original script was edited since cookies were causing issues
+    # rockfish download -m 5kHz -s {params.save_dir} ;
+
 rule rockfish_call:
     input: 
         # setup=expand('{tooling}/setup_status/rockfish.status', tooling=config['tooling_dir']),
         pod5=config['pod5dir'] + "/{experiment}_{sr}kHz",
-        bam="bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam",
+        bam=config['output_dir'] + "/" + "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam",
+        model=ROCKFISH_MODEL
     output: 
-        main=directory("tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}"),
-        pred="tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}/predictions.tsv",
+        main=directory(config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}"),
+        pred=config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}/predictions.tsv",
     threads: 40
     priority: 1
     resources: gpu=1
     log: "log/rockfish_call/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     conda: config['toolConfig']['rockfish']['conda']
     params: 
-        model=ROCKFISH_MODEL,
+        # model=ROCKFISH_MODEL,
         ref=getRef,
-        call_flags=config['toolConfig']['rockfish']['call_flags']
-    shell: ntsh('''
+        call_flags=config['toolConfig']['rockfish']['call_flags'],
+    shell:  ntsh("""
         p5=$(realpath {input.pod5});
         bam_dir=$(realpath {input.bam});
-        model=$(realpath {params.model});
+        model=$(realpath {input.model});
+        
         mkdir -p {output.main}; 
         cd {output.main}; 
         {TIME} rockfish inference \
@@ -48,43 +63,59 @@ rule rockfish_call:
             --bam_path $bam_dir \
             --model_path $model \
             -t {threads} {params.call_flags};
-        ''')
+    """)
 
 rule rockfish_map:
-    input:  "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam",
-    output: "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}_bam_ref_map.tsv"
+    input:  config['output_dir'] + "/" + "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam",
+    output: config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}_bam_ref_map.tsv"
     threads: 40
     priority: 1
     resources: gpu=1
     log: "log/rockfish_map/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     conda: config['toolConfig']['rockfish']['conda']
     params:
-        ref=getRef
-    shell: sh("python workflow/scripts_common/rockfish_extract_ref_pos.py --workers {threads} {input} {params.ref} > {output}")
+        ref=getRef,
+        script_dir=Path(workflow.basedir) / "scripts_common"
+    shell: ntsh("""
+        if  [ -f /.dockerenv ];
+        then
+            eval "$(micromamba shell hook --shell bash)";
+            micromamba activate rockfish;
+        elif  [ -d "/.singularity.d" ];
+        then
+            eval "$(micromamba shell hook --shell bash)";
+            micromamba activate rockfish;
+        fi;
+        {TIME} python {params.script_dir}/rockfish_extract_ref_pos.py \
+            --workers {threads} {input} {params.ref} > {output}""")
 
 rule rockfish_intersect:
     input: 
-        ref="tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}_bam_ref_map.tsv",
-        pre="tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}/predictions.tsv"
-    output: "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.remapped.tsv"
+        ref=config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}_bam_ref_map.tsv",
+        pre=config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}/predictions.tsv"
+    output: config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.remapped.tsv"
     threads: 20
     log: "log/rockfish_intersect/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     priority: 1
-    shell: sh("python workflow/scripts/rockfish_intersect.py -i {input.pre} -r {input.ref} -o {output}")
+    params: 
+        script_dir=Path(workflow.basedir) / "scripts_common"
+    shell: sh("python {params.script_dir}/rockfish_intersect.py -i {input.pre} -r {input.ref} -o {output}")
 
 rule rockfish_aggregate:
-    input:  "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.remapped.tsv"
-    output: "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.tsv"
+    input:  config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.remapped.tsv"
+    output: config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.tsv"
     threads: 20
     log: "log/rockfish_aggregate/{experiment}_{sr}kHz_{acc}_v{ver}.log"
-    shell: sh("python workflow/scripts/rockfish_aggregate.py -i {input} -o {output}")
+    params: 
+        script_dir=Path(workflow.basedir) / "scripts_common"
+    shell: sh("python {params.script_dir}/rockfish_aggregate.py -i {input} -o {output}")
 
 rule rockfish_getfasta:
     input:  
-        bed="tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.tsv",
+        bed=config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.tsv",
         fasta=lambda wildcards: getRef(wildcards),
         genome=lambda wildcards: re.sub(r'.fa(sta|)', '.genome', getRef(wildcards))
-    output: "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
+    output: config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
     threads: 20
     log: "log/rockfish_addfasta/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     shell: ntsh('''
@@ -96,9 +127,11 @@ rule rockfish_getfasta:
     ''')
 
 rule consolidate_rockfish:
-    input:  "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
-    output: "meta/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.std.bed"
+    input:  config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
+    output: config['output_dir'] + "/" + "meta/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.std.bed"
     threads: 20
-    conda:  f"../{config['std_conda']}"
+    conda:  config['default_conda_env']
     log: "log/consolidate_rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.log"
-    shell: sh("python workflow/scripts_common/modkit_consolidate.py {input} {output}")
+    params: 
+        script_dir=Path(workflow.basedir) / "scripts_common"
+    shell: sh("python {params.script_dir}/rockfish_consolidate.py {input} {output}")

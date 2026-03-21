@@ -48,7 +48,7 @@ fi
 
 [ ! -f f5c-v1.5-binaries.tar.gz ] && wget https://github.com/hasindu2008/f5c/releases/download/v1.5/f5c-v1.5-binaries.tar.gz
 [ ! -f miniconda.sh ] && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-[ ! -f htslib-1.21.tar.bz2 ] && https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2
+[ ! -f htslib-1.21.tar.bz2 ] && wget https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2
 
 cd ../
 docker build --no-cache -t sowpati/ont-methylation-benchmarking:latest .

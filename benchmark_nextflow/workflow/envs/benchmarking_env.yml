@@ -1,0 +1,23 @@
+name: benchmark_env
+channels:
+  - conda-forge
+  - anaconda
+  - bioconda
+  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - biopython=1.86
+  - python
+  - pip
+  - polars=1.36.1
+  - seaborn=0.13.2
+  - snakemake-minimal=9.14.5
+  - samtools==1.21
+  - bedtools==2.30.0
+  - nanoq==0.10.0
+  - nanoplot=1.46.2
+  - nanostat==1.6.0
+  - time==1.9.0
+  - pip:
+      - blue-crab==0.4.0
