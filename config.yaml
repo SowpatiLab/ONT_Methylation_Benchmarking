@@ -3,11 +3,11 @@ references: references.yaml
 pod5dir: pod5
 filterChromosomes: true
 tooling_dir: tooling
-output_dir: .
+output_dir: output
 
 runControls: 
     experiments: [ 
-        Ecoli_WT, Ecoli_DM, Ecoli_DM_MSssI, HP26695_WT, HP26695_WGA, HPJ99_WT, Tdenticola_WT, Avariabilis_WT,
+        Ecoli_WT, Ecoli_DM, Ecoli_DM_MSssI, HP26695_WT, HP26695_WGA, HPJ99_WT, Tdenticola_WT, Avariabilis_WT
     ]
     runs: []
     accuracy: [ sup,hac ]
@@ -87,7 +87,7 @@ toolConfig:
     executable: modkit
     version: 0.5.1-rc1
 
-default_conda_env: snakemake
+default_conda_env: envs/benchmarking_env.yml
 
 timit: true
 logit: true

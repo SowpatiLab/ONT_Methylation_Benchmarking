@@ -16,8 +16,10 @@ dependencies:
   - samtools==1.21
   - bedtools==2.30.0
   - nanoq==0.10.0
-  - nanoplot=1.46.2
   - nanostat==1.6.0
   - time==1.9.0
   - pip:
       - blue-crab==0.4.0
+      - NanoPlot==1.44.1
+
+

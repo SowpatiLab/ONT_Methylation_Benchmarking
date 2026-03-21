@@ -1,0 +1,10 @@
+name: benchmark_env
+channels:
+  - conda-forge
+  - anaconda
+  - bioconda
+  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - mosdepth==0.3.12

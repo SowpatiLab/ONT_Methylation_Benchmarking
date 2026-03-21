@@ -206,29 +206,35 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 ```
     nextflow run benchmark_nextflow \
         -param-file config.yaml \
-        -profile docker
+        -profile docker \
+        --cores 10 \
+        --memory 100.GB \
+        -resume
 ```
 
 
 ## Final folder structure 
-```
-├── bam                        # bam files go here
-│   ├── sorted_mod               # mod bams
-│   ├── sorted_mod_cleansed      # filtered mod bams
-│   ├── sorted_move              # move table bams
-│   ├── sorted_move_cleansed     # filtered move table bams
-│   └── sorted_move_fnord        # move table bams sorted by pod5 id
-├── intermediary               # intermediate files stored here
-│   ├── blow5
-│   └── fastq
-├── meta                       # final output beds
-│   ├── deepmod2
-│   ├── deepbam
-│   ├── deepplant
-│   ├── f5c
-│   ├── rockfish
-│   ├── deepbam
-│   └── dorado
+<pre>
+├── output
+│   ├── bam                        # bam files go here
+|   │   ├── sorted_mod               # mod bams
+|   │   ├── sorted_mod_cleansed      # filtered mod bams
+|   │   ├── sorted_move              # move table bams
+|   │   ├── sorted_move_cleansed     # filtered move table bams
+|   │   └── sorted_move_fnord        # move table bams sorted by pod5 id
+│   ├── intermediary               # intermediate files stored here
+|   │   ├── blow5
+|   │   └── fastq
+│   ├── meta                       # final output beds         
+|   │   ├── deepmod2
+|   │   ├── deepbam
+|   │   ├── deepplant
+|   │   ├── f5c
+|   │   ├── rockfish
+|   │   ├── deepbam
+|   │   └── dorado
+│   ├── qc                         # qc folder
+│   └── tool_out                   # tool raw outputs
 ├── tool_out
 │   ├── deepmod2
 │   ├── deepbam
@@ -236,15 +242,17 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 │   ├── f5c
 │   ├── rockfish
 │   └── dorado
-├── tooling                    # tool install dir
-│   ├── DeepMod2
+├── tooling                    # tools get auto installed dir
+│   ├── DeepBAM_models
+│   ├── deepmod2
+│   ├── DeepPlant_models
 │   ├── dorado
 │   ├── dorado_models
 │   ├── f5c
 │   ├── modkit
 │   ├── rockfish
-│   └── rockfishmodels
-├── benchmark_nextflow         # nextflow workflow is contained here
+│   └── rockfish_models
+├── benchmark_snakemake        # snakemake workflow is contained here
 ├── config.yaml
 └── references.yaml
-```
+</pre>
