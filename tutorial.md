@@ -28,7 +28,7 @@ Creating conda environment
     ~/miniconda3/bin/conda init bash 
     source ~/.bashrc 
     ```
-4. Install [nextflow]() 
+4. Install [nextflow](https://www.nextflow.io/) 
     ```
     curl -s https://get.nextflow.io | bash
     echo 'alias nextflow='$(realpath nextflow) >> ~/.bashrc

@@ -27,6 +27,8 @@ mentioned in the [config.yaml](../config.yaml) file.
 
 > **Note:** Although this workflow can install all the required tools to be benchmarked, it cannot install tools that require sudo permissions to be installed. Namely `DeepBAM` and `DeepPlant` 
 
+## setting up the config file(s)
+
 ### Dataset and naming
 inside [config.yaml](../config.yaml)
 ```yaml
@@ -78,6 +80,38 @@ experiments: [
 ## this configuration will cause the workflow to expect their corresponding folders (with the '5kHz') suffix in 'pod5' and exclude the rest
 ```
 
+
+#### Selecting which samples to run:
+Once the pod5 files are in the designated folder (mentioned in config.yaml), the "exps" key (on line 5) can be used to control which samples to be run.
+
+<pre>
+eg: 
+    pod5 folder strurture:
+        .
+        ├── Anabaena_WT_5kHz
+        ├── Ecoli_DM_5kHz
+        ├── Ecoli_DM_MSssI_5kHz
+        ├── Ecoli_WT_5kHz
+        ├── HP26695_WGA_5kHz
+        ├── HP26695_WT_5kHz
+        ├── HPJ99_WT_5kHz
+        └── Tdenticola_WT_5kHz
+    
+    For this setup, to run all the samples, the exps value has to
+    be populated like so:
+        
+        exps: [Anabaena_WT,Ecoli_DM, Ecoli_DM_MSssI, Ecoli_WT,
+                HP26695_WGA, HP26695_WT, HPJ99_WT, Tdenticola_WT]
+
+        These are the names of the pod5 folders excluding 
+        the '_5kHz' part.
+
+        To limit the number of samples run, you can remove the 
+        values that you dont want to be processed from the list.
+
+        exps: [Ecoli_DM, Ecoli_WT]
+                here only Ecoli_DM and Ecoli_WT will be processed.
+</pre>
 
 #### directory setup:
 
@@ -146,6 +180,27 @@ The references for each species used must be included in the [references.yaml](.
     cut -f 1,2 reference_file.fa.fai >  reference_file.genome
 ```
 
+
+
+#### selecting tools to run and their sorresponding models:
+The config file contains the controls to which tools need to be run and where the install directories to each tool resides. This can be modified if you have already installed any of the aforementioned tools.
+
+<pre>
+    dorado_mods:
+      5mC:  []
+      5mCG: [v4r1, v5r1, v5r3, v5.2r2]
+      6mA:  []
+      4mC:  []
+    
+    rockfish_run:             []
+    deepmod2_transformer_run: [v5r3]
+    deepmod2_bilstm_run:      [v5r3]
+    f5c_run:                  []
+    f5c_stranded_run:         []
+    deepbam_run:              []
+    deepplnat_run:            []
+</pre>
+
 ### Tooling setup
 
 The `toolConfig` key contains a list of all the tools that the workflow can auto-configured, including the conda environments names. Alternatively if any of these tools are already installed on your machine you can point Nextflow to those directories, but we recommend allowing Nextflow to install it fresh for the sake of starting from a fresh point.
@@ -175,11 +230,13 @@ toolConfig:
 | `model` | Model name |
 | `call_flags` | this can be extended to add new arguments to a give tool |
 
-## Adapting the workflow to your own system architecture
+#### Adapting the workflow to your own system architecture
 By default this workflow provides the following profiles:
 1. conda
 2. apptainer
 3. docker
+
+
 
 > Inorder to adapt the workflow to your own cluster/server architecture
 you can write a custom config file and provide it with the run command using the '-c' flag.
