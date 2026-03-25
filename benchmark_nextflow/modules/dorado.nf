@@ -97,10 +97,10 @@ process download_dorado_mod_models {
 }
 
 process dorado_move {
-    publishDir "bam/sorted_mod"
+    publishDir "${params.output_dir}/bam/sorted_mod"
     
-    label 'gpu'
     label 'std_conda'
+    label 'gpu'
 
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model), path(pod5), path(reference)
@@ -121,11 +121,11 @@ process dorado_move {
 }
 
 process dorado_mod {
-    publishDir "bam/sorted_mod"
+    publishDir "${params.output_dir}/bam/sorted_mod"
 
-    label 'gpu'
     label 'std_conda'
-
+    label 'gpu'
+    
     input:
         tuple val(experiment), val(key), val(dorado), path(base_model), path(mod_model), path(pod5), path(reference)
 

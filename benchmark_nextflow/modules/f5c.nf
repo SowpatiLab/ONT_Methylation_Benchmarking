@@ -5,7 +5,7 @@ include {
 } from '../lib/utils.groovy'
 
 process bam_to_fastq {
-    publishDir "intermediary/fastq", mode: "copy", pattern: "*.fastq*"
+    publishDir "${params.output_dir}/intermediary/fastq", mode: "copy", pattern: "*.fastq*"
 
     label 'cpu'
     label 'std_conda'
@@ -23,7 +23,7 @@ process bam_to_fastq {
 }
 
 process pod5_to_blow5 {
-    publishDir "intermediary/blow5", mode: "copy", pattern: "*.blow5*"
+    publishDir "${params.output_dir}/intermediary/blow5", mode: "copy", pattern: "*.blow5*"
 
     label 'cpu'
     label 'std_conda'
@@ -55,8 +55,8 @@ process setup_f5c {
 }
 
 process f5c_idx_fastq {
-    publishDir "intermediary/fastq", mode: "copy", pattern: "*.fastq*"
-    publishDir "intermediary/blow5", mode: "copy", pattern: "*.blow5*"
+    publishDir "${params.output_dir}/intermediary/fastq", mode: "copy", pattern: "*.fastq*"
+    publishDir "${params.output_dir}/intermediary/blow5", mode: "copy", pattern: "*.blow5*"
 
     input:
     tuple val(install_dir), path(blow5), path(bam), path(bam_idx), path(fastq)
@@ -72,7 +72,7 @@ process f5c_idx_fastq {
 }
 
 process f5c_call {
-    publishDir "tool_out/f5c/readwise"
+    publishDir "${params.output_dir}/tool_out/f5c/readwise"
     label 'gpu'
     
     input:
@@ -95,7 +95,7 @@ process f5c_call {
 }
 
 process f5c_restrand {
-    publishDir "tool_out/f5c/readwise_stranded", mode: "copy", pattern: "*.tsv"
+    publishDir "${params.output_dir}/tool_out/f5c/readwise_stranded", mode: "copy", pattern: "*.tsv"
     
     label 'cpu'
     label 'std_conda'
@@ -131,7 +131,7 @@ def isStranded(filename) {
 }
 
 process f5c_aggregate {
-    publishDir { "tool_out/f5c/aggregated${isStranded(input_file) ? '_stranded' : ''}" }
+    publishDir { "${params.output_dir}/tool_out/f5c/aggregated${isStranded(input_file) ? '_stranded' : ''}" }
     
     label 'cpu'
     label 'std_conda'
@@ -150,7 +150,7 @@ process f5c_aggregate {
 }
 
 process f5c_add_fasta {
-    publishDir { "tool_out/f5c/aggregated_fasta${isStranded(input_file) ? '_stranded' : ''}" }
+    publishDir { "${params.output_dir}/tool_out/f5c/aggregated_fasta${isStranded(input_file) ? '_stranded' : ''}" }
 
     label 'cpu'
     conda 'bioconda::bedtools==2.30.0'
@@ -191,7 +191,7 @@ process f5c_add_fasta {
 }
 
 process consolidate_f5c {
-    publishDir { "meta/f5c${isStranded(input_file) ? '_stranded' : ''}" }, mode: "copy"
+    publishDir "${params.output_dir}/meta/f5c${isStranded(input_file) ? '_stranded' : ''}", mode: "copy"
 
     label 'cpu'
     label 'std_conda'

@@ -3,7 +3,7 @@ include {
 } from '../lib/utils.groovy'
 
 process samtools_move_cleanse {
-    publishDir "bam/sorted_move_cleansed"
+    publishDir "${params.output_dir}/bam/sorted_move_cleansed"
 
     label 'std_conda'
     // conda 'bioconda::samtools==1.21'
@@ -22,7 +22,7 @@ process samtools_move_cleanse {
 }
 
 process samtools_mod_cleanse {
-    publishDir "bam/sorted_mod_cleansed"
+    publishDir "${params.output_dir}/bam/sorted_mod_cleansed"
 
     label 'std_conda'
 

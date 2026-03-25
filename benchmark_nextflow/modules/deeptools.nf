@@ -5,7 +5,7 @@ include {
 
 process bam_fn_reorder {
     label 'cpu'
-    publishDir "bam/sorted_move_fnord"
+    publishDir "${params.output_dir}/bam/sorted_move_fnord"
 
     input:  tuple path(bam), path(bam_idx)
     output: path "${bam.baseName}.fnTagOrdered.bam"
@@ -46,7 +46,7 @@ process download_deepplant_models {
 }
 
 process deepbam_call {
-    publishDir "tool_out/deepbam/readwise"
+    publishDir "${params.output_dir}/tool_out/deepbam/readwise"
     label 'gpu'
 
     input: tuple path(pod5), path(bam), path(reference), path(model)
@@ -66,7 +66,7 @@ process deepbam_call {
 }
 
 process deepplant_call {
-    publishDir "tool_out/deepplant/readwise"
+    publishDir "${params.output_dir}/tool_out/deepplant/readwise"
     label 'gpu'
 
     input:  tuple path(pod5), path(bam), path(reference), path(model)
@@ -96,7 +96,7 @@ def which_tool(file, idx){
 process deetool_aggregate {
     label 'std_conda'
 
-    publishDir { "tool_out/${which_tool("${readwise_file.baseName}", -1)}/aggregated" }
+    publishDir { "${params.output_dir}/tool_out/${which_tool("${readwise_file.baseName}", -1)}/aggregated" }
     
     label 'cpu'
     label 'std_conda'
@@ -113,7 +113,7 @@ process deetool_aggregate {
 }
 
 process deeptool_rebed{
-    publishDir { "tool_out/${which_tool("$input_file.baseName", -2)}/rebed" }
+    publishDir { "${params.output_dir}/tool_out/${which_tool("$input_file.baseName", -2)}/rebed" }
 
     label 'cpu'
     label 'std_conda'
@@ -134,7 +134,7 @@ process deeptool_rebed{
 }
 
 process deepbam_consolidate {
-    publishDir "meta/deepbam", mode: "copy"
+    publishDir "${params.output_dir}/meta/deepbam", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -148,7 +148,7 @@ process deepbam_consolidate {
 }
 
 process deepplant_consolidate {
-    publishDir "meta/deepplant", mode: "copy"
+    publishDir "${params.output_dir}/meta/deepplant", mode: "copy"
     label 'cpu'
     label 'std_conda'
     

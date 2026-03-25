@@ -13,15 +13,12 @@ Creating conda environment
 ```bash
 
 # Activate conda environment
-conda create \
-    -n ont_basemod_benchmarking_env \
-    -c conda-forge \
-    -c bioconda \
-     snakemake
+conda env create \
+    -n benchmark_env \
+    -f benchmark_nextflow/envs/benchmarking_env.yml
 
 # Activate conda environment
-
-conda activate ont_basemod_benchmarking_env
+conda activate benchmark_env
 ```
 
 ## Basic dependencies required to run the workflow

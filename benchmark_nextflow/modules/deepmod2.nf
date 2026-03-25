@@ -7,8 +7,9 @@ include {
 process setup_deepmod2 {
     storeDir "${params.tooling_dir}"
 
-    label 'install'
-    
+    // label 'install'
+    label 'deepmod2'
+
     output:
     path "${params.toolConfig.deepmod2.install_dir}"
 
@@ -28,16 +29,14 @@ process setup_deepmod2 {
         ## installing cuda packages
 
         conda activate "${params.toolConfig.deepmod2.conda}"
-        cuda_version=\$(nvidia-smi | grep -oP 'CUDA Version: \\K[\\d.]+' | sed 's/\\.//')
-        echo installing \$cuda_version
-        pip install torch torchvision --index-url https://download.pytorch.org/whl/cu\$cuda_version
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
     """
 }
 
 process deepmod2_call {
-    publishDir "tool_out/deepmod2"
+    publishDir "${params.output_dir}/tool_out/deepmod2"
 
-    label 'gpu' 
+    label 'gpu'
     label 'deepmod2'
 
     input:
@@ -49,9 +48,9 @@ process deepmod2_call {
     script:
     model_path = fetch_deepmod2_model("${input_bam}", "${model}")
     pod5 = file(fetch_pod5_loc("${input_bam}"))
-    exec = workflow.containerEngine!=null ? "deepmod2" : "python ${deepmod2_dir}/deepmod2"
+    exec = workflow.containerEngine!=null ? "conda run -n ${params.toolConfig.deepmod2.conda}" : ""
     """
-        ${exec} detect \
+        ${exec} python ${deepmod2_dir}/deepmod2 detect \
             --bam ${input_bam} \
             --input ${pod5} \
             --model ${model_path} \
@@ -65,7 +64,7 @@ process deepmod2_call {
 }
 
 process deepmod2_add_ref {
-    publishDir "tool_out/deepmod2", mode: "copy"
+    publishDir "${params.output_dir}/tool_out/deepmod2", mode: "copy"
 
     label 'cpu'
 
@@ -86,7 +85,7 @@ process deepmod2_add_ref {
 }
 
 process consolidate_deepmod2 {
-    publishDir "meta/deepmod2", mode: "copy"
+    publishDir "${params.output_dir}/meta/deepmod2", mode: "copy"
 
     label 'cpu'
     label 'std_conda'

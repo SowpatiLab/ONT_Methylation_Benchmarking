@@ -7,6 +7,12 @@ This folder contains the Nextflow implementation of the ont_methylation_benchmar
 ## Setup
 Since multiple tools are being benchnarked at once, there are multiple dependencies that need to be satisfied before the workflow can be run. These include:
 
+### Base dependencies (have to be installed)
+- [nextflow](https://www.nextflow.io/)
+- [conda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview#windows-guides)  or [miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main)
+- [docker](https://www.docker.com/) or [apptainer](https://apptainer.org/)  or both
+
+### tooling dependencies (optional)
 - [Dorado](https://github.com/nanoporetech/dorado) - v0.9.1/v1.1.1 <br/>
 - [DeepMod2](https://github.com/WGLab/DeepMod2/tree/main)<br/>
 - [DeepBAM](https://github.com/xiaochuanle/DeepBAM) - v0.1.0<br/>
@@ -15,29 +21,20 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [Rockfish](https://github.com/lbcb-sci/rockfish/tree/r10.4.1) - r10.4.1 branch<br/>
 - [Mokit](https://github.com/nanoporetech/modkit) - v0.5.1-rc1<br/>
 
+By default this nextflow workflow is capable of installing all the optional dependencies on its own, hence they need not be installed manually, this is possible when run with the 'conda' profile. Moreover, the docker/apptainer profiles use the tools packaged into the [docker-image](https://hub.docker.com/r/sowpati/ont-methylation-benchmarking/tags).
 The current workflow can be configured to run with existing working installations of said tools, else if not detected, the tools will be installed by the workflow in the directory
 mentioned in the [config.yaml](../config.yaml) file.
 
-<b>Note:</b> At the time of writing, DeepBAM and DeepPlant do not provide any precompiled versions of their software and hence they would still have to be installed manually, and the location to their respective executable will have to be provided in the [config.yaml](../config.yaml) file.
-
-
-### Pre-requisites to run the workflow 
-1. [Nextflow](https://www.Nextflow.io/docs/latest/install.html)
-
-and any or all of these:
-2. [anaconda](https://www.anaconda.com/download)
-3. [docker](https://www.docker.com/)
-4. [apptainer](https://apptainer.org/)
+> **Note:** Although this workflow can install all the required tools to be benchmarked, it cannot install tools that require sudo permissions to be installed. Namely `DeepBAM` and `DeepPlant` 
 
 ### Dataset and naming
+inside [config.yaml](../config.yaml)
+```yaml
+pod5dir: pod5
+```
 
-```
-{
-    "pod5dir": "pod5"
-}
-```
 #### File name nomenclature rule:
-The pod5dir should have a folder for each unique experiment. The pod5 file(s) must me stored under the folder for each correspoding folder.
+The pod5dir should have a folder for each unique experiment. The pod5 file(s) must me stored under the folder for each corresponding folder.
 
 Folder names must contain the '_5kHz' suffix, this enables nextflow to exclude folder that do not have the suffix. 
 
@@ -68,25 +65,24 @@ Folder names must contain the '_5kHz' suffix, this enables nextflow to exclude f
 
 These names can then be included under the "runControls" key in [config.yaml](../config.yaml).
 
-<pre>
-{
-    "experiments": [
-        "Ecoli_WT",
-        "Ecoli_DM",
-        "Ecoli_DM_MSssI",
-        "HP26695_WT",
-        "HP26695_WGA",
-    ],
-}
+inside [config.yaml](../config.yaml)
+```yaml
+experiments: [
+    Ecoli_WT,
+    Ecoli_DM,
+    Ecoli_DM_MSssI,
+    HP26695_WT,
+    HP26695_WGA
+]
 
-<b>## this configuration will cause the workflow to expect their corresponding folders (with the '5kHz') suffix in 'datasets/pod5' and exclude the rest</b>
-</pre>
+## this configuration will cause the workflow to expect their corresponding folders (with the '5kHz') suffix in 'pod5' and exclude the rest
+```
 
 
 #### directory setup:
 
-```
-datasets/pod5
+<pre>
+pod5
 ├── Anabaena_WT_5kHz
 │   └── Anabaena_WT_5kHz.pod5
 ├── Ecoli_DM_5kHz
@@ -103,11 +99,18 @@ datasets/pod5
 │   └── HPJ99_WT_5kHz.pod5
 └── Tdenticola_WT_5kHz
     └── Tdenticola_WT_5kHz.pod5
-```
+
+## multi pod5's are also accepted as long as they are included under the same folder
+</pre>
 
 ### Reference files
+inside [config.yaml](../config.yaml)
+```yaml
+references: references.yaml
+```
+the `references` key points to the  [references.yaml](../references.yaml) file that contains the paths to the reference genomes.
 
-The references for each species used must be included in the [references.yaml](../references.yaml). The reference locations are included with the 'references' key, while the 'std_chroms' can be used to control which chromosomes/contigues are filtered for (leaving it empty will return all available chromosomes/contigues).
+The references for each species used must be included in the [references.yaml](../references.yaml). While the `std_chroms` key can be used to control which chromosomes/contigues are filtered for (leaving it empty will return all available chromosomes/contigues).
 
 ```yaml
     references:
@@ -133,46 +136,44 @@ The references for each species used must be included in the [references.yaml](.
         Tdenticola: ['NC_002967.9']
 ```
 
+</br>
 
-note: before the nextflow workflow is run, all reference files used are required to be indexed and their correspinding genome files have to be generated like so:
+> **Note:** before the nextflow workflow is run, all reference files used are required to be indexed and their corresponding genome files have to be generated like so:
+</br>
 
-```
+```bash
     samtools faidx reference_file.fa
     cut -f 1,2 reference_file.fa.fai >  reference_file.genome
 ```
 
 ### Tooling setup
 
-The 'toolConfig' key contains a list of all the tools that the workflow can autoconfigure, including the conda environments names. Alternatively if any of these tools are already installed on your machine you can point Nextflow to those directories, but we recommend allowing Nextflow to install it fresh for the sake of starting from a fresh point.
+The `toolConfig` key contains a list of all the tools that the workflow can auto-configured, including the conda environments names. Alternatively if any of these tools are already installed on your machine you can point Nextflow to those directories, but we recommend allowing Nextflow to install it fresh for the sake of starting from a fresh point.
 
 The following keys need to be setup:
-<pre> 
-    {
-        "<b>tooling_dir</b>": "tooling"
-        "<b>toolConfig</b>": {
-            "<b>tool_name</b>": {
-                "<b>install_dir</b>": "rockfish",      
-                "<b>executable</b>": "rockfish"        
-                "<b>conda</b>": "rockfish_test_nf",    
-                "<v><b>model_dir</b></v>": "rockfish_models",
-                "<b>model</b>": "rf_5kHz.ckpt",        
-                "<b>call_flags</b>": "-b 8192 -d 0"    
-            }
-        }
-    }
+```yaml
+tooling_dir: tooling
+toolConfig:
+    tool_name:
+        install_dir: rockfish,      
+        executable: rockfish        
+        conda: rockfish_test_nf,    
+        model_dir: rockfish_models,
+        model: rf_5kHz.ckpt,        
+        call_flags: -b 8192 -d 0    
     
-</pre>
+```
 
-<b>tooling_dir: </b> This key points to where the tool will be installed. Ideally the workflow expects all the tools to be installed under the same location. If each of your tools are installed we recommend setting tooling_dir to "" and giving the absolute path of each tool to its corresponding install_dir key.
+`tooling_dir` This key points to where the tool will be installed. Ideally the workflow expects all the tools to be installed under the same location. If each of your tools are already installed, we recommend setting tooling_dir to "" and giving the absolute path of each tool to its corresponding `install_dir` key.
 
 | key | description | 
 |-|-|
-| install_dir | If this key is present the tool will be installed by the workflow. It can also be changed to use the tool that is pre-installed in your system| 
-| executable | This attribute is the path to the executable. If using your own install, please ensure the executable is functional| 
-| conda | This directs the name of the conda environment name, and can be reused by the user since it gets installed globally. If a environment of the same name exists, it will be reinstalled by this workflow. |  
-| model_dir | This is where the models for the given tool will be downloaded | 
-| model | Model name |
-| call_flags | this can be extended to add new arguments to a give tool |
+| `install_dir` | If this key is present the tool will be installed by the workflow. It can also be changed to use the tool that is pre-installed in your system| 
+| `executable` | This attribute is the path to the executable. If using your own install, please ensure the executable is functional| 
+| `conda` | This directs the name of the conda environment name, and can be reused by the user since it gets installed globally. If a environment of the same name exists, it will be reinstalled by this workflow. |  
+| `model_dir` | This is where the models for the given tool will be downloaded | 
+| `model` | Model name |
+| `call_flags` | this can be extended to add new arguments to a give tool |
 
 ## Adapting the workflow to your own system architecture
 By default this workflow provides the following profiles:
@@ -180,69 +181,104 @@ By default this workflow provides the following profiles:
 2. apptainer
 3. docker
 
-Inorder to adapt the workflow to your own cluster/server architecture
+> Inorder to adapt the workflow to your own cluster/server architecture
 you can write a custom config file and provide it with the run command using the '-c' flag.
 For further details refer the [nextflow doc](https://www.nextflow.io/docs/latest/config.html)
 
 ## Running the workflow with docker
-Since certian tools like DeepBAM and DeepPlant require sudo permissions to be built from source, 
-we recommend building a containerised image with docker, which can be built using the included
-[dockerfile](../dockerfile) in this repo for reproducibility sake.
+Since certain tools like `DeepBAM` and `DeepPlant` require sudo permissions to be built from source, we recommend running the workflow with either the `docker` or `apptainer` profiles.
 
-### Setting up the docker image
-We recommend installing [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) so that docker is able to access
-the GPUs
+By default the workflow is capable of pulling the required container from [dockerhub](https://hub.docker.com/r/sowpati/ont-methylation-benchmarking/tags). But alternatively you can also build the docker image from the included [dockerfile](../dockerfile). For this we recommend running the [docker_build.sh](../docker_build.sh) script, since it fetched some of the static dependencies required by the build process.
 
-```bash
-
-    bash ../docker_build_assets # fetch build dependencies
-    docker build -t sowpati/ont-methylation-benchmarking:latest .
-```
+> **Note:** The [docker_build.sh](../docker_build.sh) runs an extra step after the build process, where the `rockfish_models` are downloaded before hand. This is done to overcome some of the 
 
 ## Running the workflow 
 
-Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
+Asuming the workflow is contained in the `./benchmark_nextflow`
 
-```
+### with docker (recommended)
+```bash
     nextflow run benchmark_nextflow \
         -param-file config.yaml \
-        -profile docker \
-        --cores 10 \
-        --memory 100.GB \
-        -resume
+        -profile docker
 ```
 
+### with apptainer
+```bash
+    nextflow run benchmark_nextflow \
+        -param-file config.yaml \
+        -profile apptainer
+    
+    #or
+
+    nextflow run benchmark_nextflow \
+        -param-file config.yaml \
+        -profile singularity
+```
+
+### with conda
+```bash
+    # asuming you are in the 'base' environments
+    nextflow run benchmark_nextflow \
+        -param-file config.yaml \
+        -profile conda \
+        --conda_prefix $CONDA_PREFIX
+
+    # from any other env
+    nextflow run benchmark_nextflow \
+        -param-file config.yaml \
+        -profile conda \
+        --conda_prefix $CONDA_PREFIX_1
+```
+
+### optional flags:
+```
+    --threads <int> - set the number of threads that can be used default: 8
+    --memory        - sets the memory utilization | default: 32.GB
+    --references    - use another reference map file | default: references.yaml
+    --pod5dir       - director where pod5 files are stored | default: pod5
+    --filterChromosomes <bool> - whether or not to filter chromosomes 
+                                 specified in  references.yaml
+    --output_dir    - path to which output files should be symlinked | default: output
+```
 
 ## Final folder structure 
 <pre>
+.
+├── benchmark_nextflow         # nextflow workflow is contained here
 ├── output
-│   ├── bam                        # bam files go here
+|   │   ├── bam                # bam files go here
 |   │   ├── sorted_mod               # mod bams
 |   │   ├── sorted_mod_cleansed      # filtered mod bams
 |   │   ├── sorted_move              # move table bams
 |   │   ├── sorted_move_cleansed     # filtered move table bams
 |   │   └── sorted_move_fnord        # move table bams sorted by pod5 id
-│   ├── intermediary               # intermediate files stored here
+│   ├── intermediary
 |   │   ├── blow5
 |   │   └── fastq
-│   ├── meta                       # final output beds         
+│   ├── meta                  # final output beds for each tool
+|   │   ├── deepbam
 |   │   ├── deepmod2
-|   │   ├── deepbam
 |   │   ├── deepplant
+|   │   ├── dorado
 |   │   ├── f5c
-|   │   ├── rockfish
-|   │   ├── deepbam
-|   │   └── dorado
-│   ├── qc                         # qc folder
-│   └── tool_out                   # tool raw outputs
-├── tool_out
-│   ├── deepmod2
-│   ├── deepbam
-│   ├── deepplant
-│   ├── f5c
-│   ├── rockfish
-│   └── dorado
-├── tooling                    # tools get auto installed dir
+|   │   ├── f5c_stranded
+|   │   └── rockfish
+│   ├── qc
+|   │   ├── mosdepth
+|   │   ├── nanoplot
+|   │   ├── nanoq
+|   │   └── nanostat
+│   └── tool_out
+|       ├── deepbam
+|       ├── deepmod2
+|       ├── deepplant
+|       ├── dorado
+|       ├── f5c
+|       └── rockfish
+├── pod5                       # input raw signal files
+├── references                 # references files go here
+├── tooling                    # tool install dir
 │   ├── DeepBAM_models
 │   ├── deepmod2
 │   ├── DeepPlant_models
@@ -251,8 +287,8 @@ Asuming the workflow is contained in the <b>benchmark_nextflow</b>:
 │   ├── f5c
 │   ├── modkit
 │   ├── rockfish
-│   └── rockfish_models
-├── benchmark_snakemake        # snakemake workflow is contained here
-├── config.yaml
-└── references.yaml
+│   └── rockfishmodels
+├── config.yaml                # controls for the workflow
+├── references.yaml            # reference file map
+└── work                       # working folder generated by nextflow
 </pre>

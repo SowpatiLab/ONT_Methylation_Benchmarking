@@ -5,21 +5,32 @@ include {
     consolidate_deepmod2
 } from '../modules/deepmod2.nf'
 
+
+workflow DEEPMOD2_setup {
+    main:
+        // deepmod2_exe = Channel.empty()
+        // if(workflow.containerEngine!=null){
+        //     deepmod2_exe = Channel.of('deepmod2')
+        // } else {
+        //     setup_deepmod2()
+        //     deepmod2_exe = setup_deepmod2.output
+        // }
+        setup_deepmod2()
+    emit:
+        setup_deepmod2.output
+        
+}
+
 workflow DEEPMOD2_WORKFLOW {
     take: 
+        deepmod2_exe
         reference_map_ch
         samtools_cleansed_ch
         reference_map_ob
         model_type // 'transformer' or 'bilstm'
     main:
 
-        deepmod2_exe = Channel.empty()
-        if(workflow.containerEngine!=null){
-            deepmod2_exe = Channel.of('deepmod2')
-        } else {
-            setup_deepmod2()
-            deepmod2_exe = setup_deepmod2.output
-        }
+        
 
         // remap pod5 files back to their bam files
         deepmod2_input = samtools_cleansed_ch

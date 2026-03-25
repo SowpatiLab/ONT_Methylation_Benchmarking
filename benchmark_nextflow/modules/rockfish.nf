@@ -7,7 +7,7 @@ process setup_rockfish {
     storeDir "${params.tooling_dir}"
 
     output: path("${params.toolConfig.rockfish.install_dir}"), emit: 'exec'
-
+    
     script:
     """
         source "\$(conda info --base)/etc/profile.d/conda.sh"
@@ -37,7 +37,7 @@ process download_rockfish_model {
 }
 
 process rockfish_call {
-    publishDir "tool_out/rockfish"
+    publishDir "${params.output_dir}/tool_out/rockfish"
     label 'gpu'
     label 'rockfish'
 
@@ -60,7 +60,7 @@ process rockfish_call {
 }
 
 process rockfish_map_generate {
-    publishDir "tool_out/rockfish/readwise"
+    publishDir "${params.output_dir}/tool_out/rockfish/readwise"
     
     label 'cpu'
     label 'rockfish'
@@ -85,7 +85,7 @@ process rockfish_map_generate {
 }
 
 process rockfish_intersect {
-    publishDir "tool_out/rockfish", mode: "copy"
+    publishDir "${params.output_dir}/tool_out/rockfish", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -104,7 +104,7 @@ process rockfish_intersect {
 }
 
 process rockfish_aggregate {
-    publishDir "tool_out/rockfish", mode: "copy"
+    publishDir "${params.output_dir}/tool_out/rockfish", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -122,7 +122,7 @@ process rockfish_aggregate {
 }
 
 process rockfish_getfasta {
-    publishDir "tool_out/rockfish", mode: "copy"
+    publishDir "${params.output_dir}/tool_out/rockfish", mode: "copy"
 
     label 'cpu'
     label 'std_conda'
@@ -147,7 +147,7 @@ process rockfish_getfasta {
 }
 
 process consolidate_rockfish {
-    publishDir "meta/rockfish", mode: "copy"
+    publishDir "${params.output_dir}/meta/rockfish", mode: "copy"
     label 'cpu'
     label 'std_conda'
 

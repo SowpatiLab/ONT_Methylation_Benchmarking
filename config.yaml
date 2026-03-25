@@ -1,6 +1,5 @@
-
-references: references.yaml
 pod5dir: pod5
+references: references.yaml
 filterChromosomes: true
 tooling_dir: tooling
 output_dir: output

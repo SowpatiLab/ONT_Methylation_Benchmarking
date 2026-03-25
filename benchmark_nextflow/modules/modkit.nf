@@ -27,7 +27,7 @@ process install_modkit {
 // }
 
 process modkit_pileup {
-    publishDir 'tool_out/dorado/pileup'
+    publishDir "${params.output_dir}/tool_out/dorado/pileup"
     label 'cpu'
 
     input:
@@ -49,7 +49,7 @@ process modkit_pileup {
 }
 
 process modkit_add_ref {
-    publishDir 'tool_out/dorado/ref'
+    publishDir "${params.output_dir}/tool_out/dorado/ref"
 
     label 'cpu'
 
@@ -68,7 +68,7 @@ process modkit_add_ref {
 }
 
 process standardise_dorado {
-    publishDir "meta/dorado"
+    publishDir "${params.output_dir}/meta/dorado"
 
     label 'cpu'
     label 'std_conda'

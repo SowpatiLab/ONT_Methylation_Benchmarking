@@ -1,7 +1,7 @@
 process nanostat {
-    publishDir "qc/nanostat", mode: "copy"
+    publishDir "${params.output_dir}/qc/nanostat", mode: "copy"
     conda "bioconda::nanostat==1.6.0"
-    label "cpu"
+    label 'cpu'
     label 'std_conda'
 
     input: tuple path(input_bam), path(input_bam_idx)
@@ -15,9 +15,9 @@ process nanostat {
 }
 
 process nanoplot {
-    publishDir "qc/nanoplot", mode: "copy"
+    publishDir "${params.output_dir}/qc/nanoplot", mode: "copy"
 
-    label "cpu"
+    label 'cpu'
     label 'std_conda'
 
     errorStrategy 'retry'
@@ -34,9 +34,9 @@ process nanoplot {
 }
 
 process nanoq {
-    publishDir "qc/nanoq", mode: "copy"
+    publishDir "${params.output_dir}/qc/nanoq", mode: "copy"
 
-    label "cpu"
+    label 'cpu'
     label 'std_conda'
 
     input: tuple path(bam), path(bam_idx), path(input_fastq)
@@ -50,9 +50,9 @@ process nanoq {
 }
 
 process mosdepth {
-    publishDir "qc/mosdepth", mode: "copy"
+    publishDir "${params.output_dir}/qc/mosdepth", mode: "copy"
     conda "bioconda::mosdepth=0.3.12"
-    label "cpu"
+    label 'cpu'
 
     input: tuple path(input_bam), path(input_bam_idx)
     output: 

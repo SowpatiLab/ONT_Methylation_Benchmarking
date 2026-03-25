@@ -6,6 +6,7 @@ include {
 include { ROCKFISH_SUBWORKFLOW } from './subworkflows/rockfish_subwf.nf'
 
 include {
+    DEEPMOD2_setup;
     DEEPMOD2_WORKFLOW as DEEPMOD2_WORKFLOW_TRANSFORMER;
     DEEPMOD2_WORKFLOW as DEEPMOD2_WORKFLOW_BILSTM;
 } from './subworkflows/deepmod2_subwf.nf'
@@ -127,8 +128,11 @@ workflow {
 
         /* DEEPOMOD2 */
         if( run_deepMod2_transformer || run_deepMod2_bilstm ){
+
+            deepmod2_exec = DEEPMOD2_setup()
             if(run_deepMod2_transformer) {
                 DEEPMOD2_WORKFLOW_TRANSFORMER (
+                    deepmod2_exec,
                     reference_map,
                     samtools_cleansed,
                     reference_map_ob,
@@ -137,6 +141,7 @@ workflow {
             }
             if(run_deepMod2_bilstm) {
                 DEEPMOD2_WORKFLOW_BILSTM (
+                    deepmod2_exec,
                     reference_map,
                     samtools_cleansed,
                     reference_map_ob,
