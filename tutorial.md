@@ -41,7 +41,7 @@ Creating conda environment
     cd ONT_Methylation_Benchmarking
     ```
 4. Index reference files
-    All the reference files that are used is expected to be 
+    All the reference files are expected to be indexed first.
     ```
         samtools faidx example/references/H.pylori_J99_ATCC700824.fa
         cut -f 1,2 \
