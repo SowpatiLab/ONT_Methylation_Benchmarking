@@ -1,35 +1,36 @@
-
-references: references.yaml
 pod5dir: pod5
+references: references.yaml
 filterChromosomes: true
 tooling_dir: tooling
-output_dir: .
+output_dir: output
 
 runControls: 
-    experiments: [ HPJ99_WT ]
+    experiments: [ 
+        HP26695_WT
+    ]
     runs: []
-    accuracy: [ sup,hac ]
+    accuracy: [ hac ]
     black_list_models : [5kHz_hac_v4r1_4mC]
     dorado_mod_models: 
-      5mC:  [v4r1,v5r1,v5r3,v5.2r2]
-      5mCG: [v4r1,v5r1,v5r3,v5.2r2]
-      6mA:  [v4r1,v4r2,v5r1,v5r3,v5.2r1]
-      4mC:  [v4r1,v5r1,v5r3,v5.2r1]
+      5mC:  [v5r3]
+      5mCG: []
+      6mA:  []
+      4mC:  []
     other_tools: 
-      rockfish: [v5r3]
-      deepmod2_transformer: [v5r3]
-      deepmod2_bilstm: [v5r3]
-      f5c: [v5r3]
-      f5c_stranded: [v5r3]
-      deepbam:   [v5r3]
-      deepplant: [v5r3]
+      rockfish: []
+      deepmod2_transformer: []
+      deepmod2_bilstm: []
+      f5c: []
+      f5c_stranded: []
+      deepbam:   []
+      deepplant: []
     qc: 
       default_model   : v5r3
       tools: 
-        nanostat: true
-        nanoplot: true
-        mosdepth: true
-        nanoq: true
+        nanostat: false
+        nanoplot: false
+        mosdepth: false
+        nanoq: false
 
 # TOOL RUN/SETUP CONFIGURATION
 toolConfig: 
@@ -85,7 +86,7 @@ toolConfig:
     executable: modkit
     version: 0.5.1-rc1
 
-default_conda_env: snakemake
+default_conda_env: envs/benchmarking_env.yml
 
 timit: true
 logit: true

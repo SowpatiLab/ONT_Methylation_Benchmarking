@@ -2,3 +2,8 @@ docker_build_assets
 .vscode
 .nextflow
 .snakemake
+example/work
+example/.nextflow
+example/.nextflow.*
+example/output
+example/tooling

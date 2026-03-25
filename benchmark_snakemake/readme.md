@@ -229,7 +229,6 @@ By default this workflow provides the following profiles:
 1. conda
 2. apptainer
 
-
 In the current configuration the model names mentioned in the square brackets represents the dorado model that each of the tool will use. Leaving any of the values empty would lead to that specific tool not running.
 
 In this example: 

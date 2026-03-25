@@ -106,7 +106,7 @@ workflow DORADO_BASECALL_MODIFIED {
         mod_models = mod_models
             .filter{ it ->  
                 if(black_list_models_ch.contains(it[1].toString()) ){
-                    log.warn "${it[0].toString()} not available, skipping."
+                    log.warn "${it[1].toString()} not available, skipping."
                 }
                 !black_list_models_ch.contains(it[1].toString()) }
             .branch{ it -> 

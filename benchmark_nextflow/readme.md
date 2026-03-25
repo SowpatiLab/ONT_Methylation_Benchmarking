@@ -255,6 +255,14 @@ Asuming the workflow is contained in the `./benchmark_nextflow`
 
 ### with docker (recommended)
 ```bash
+
+    docker pull sowpati/ont-methylation-benchmarking:latest
+
+    [ ! -d tooling/rockfish_models ] && mkdir -p tooling/rockfish_models
+    docker run -v $(pwd):$(pwd) -w $(pwd) \
+        sowpati/ont-methylation-benchmarking:latest rockfish download \
+            -m 5kHz -s tooling/rockfish_models
+
     nextflow run benchmark_nextflow \
         -param-file config.yaml \
         -profile docker

@@ -134,7 +134,7 @@ The references for each species used must be included in the [references.yaml](.
 ```
 
 
-note: before the nextflow workflow is run, all reference files used are required to be indexed and their correspinding genome files have to be generated like so:
+> **Note:** before the nextflow workflow is run, all reference files used are required to be indexed and their correspinding genome files have to be generated like so:
 
 ```
     samtools faidx reference_file.fa
