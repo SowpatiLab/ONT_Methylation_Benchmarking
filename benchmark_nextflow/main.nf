@@ -176,7 +176,7 @@ workflow {
                         reference_map_ob
                     )
                 }else{
-                    log.warn "DeepBAM is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                    log.warn "skipping DeepBAM: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
                 }
             }
             /* DEEP_PLANT */
@@ -188,7 +188,7 @@ workflow {
                         reference_map_ob,
                     )
                 }else{
-                    log.warn "DeepPlant is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                    log.warn "skipping DeepPlant: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
                 }
             }
         }
