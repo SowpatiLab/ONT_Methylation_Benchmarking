@@ -163,24 +163,33 @@ workflow {
             }
         }
         /* DeepTools */
+        
         if(run_deepBAM || run_deepPlant){
             def bam_fn_reorder = DEEPTOOLS_GENERAL_SUBWORKFLOW( samtools_cleansed )
 
             /* DEEPBAM */
             if(run_deepBAM){
-                DEEPBAM_SUBWORKFLOW(
-                    reference_map,
-                    bam_fn_reorder,
-                    reference_map_ob
-                )
+                if(workflow.containerEngine!=null){
+                    DEEPBAM_SUBWORKFLOW(
+                        reference_map,
+                        bam_fn_reorder,
+                        reference_map_ob
+                    )
+                }else{
+                    log.warn "DeepBAM is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                }
             }
             /* DEEP_PLANT */
             if(run_deepPlant){
-                DEEPPLANT_SUBWORKFLOW(
-                    reference_map,
-                    bam_fn_reorder,
-                    reference_map_ob,
-                )
+                if(workflow.containerEngine!=null){
+                    DEEPPLANT_SUBWORKFLOW(
+                        reference_map,
+                        bam_fn_reorder,
+                        reference_map_ob,
+                    )
+                }else{
+                    log.warn "DeepBAM is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                }
             }
         }
         
