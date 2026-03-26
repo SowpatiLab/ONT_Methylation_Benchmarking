@@ -29,13 +29,20 @@ process download_rerio_models {
     output: tuple val(base_model), val(key), path(model_name)
 
     script:
-    containerised = workflow.containerEngine!=null ? "containerised" : ""
+    containerised = workflow.containerEngine!=null ? "containerised" : "conda"
+    if(workflow.containerEngine!=null) {println("containerised in ${workflow.containerEngine} | ${containerised}")}
     """
-        if [ $containerised=="containerised" ];
+        if [[ $containerised == "containerised" ]];
         then
-            download_model.py .
+            echo $containerised
+            echo 'containerised rerio download';
+            cp -r /tooling/rerio/download_model.py /tooling/rerio/dorado_models . ;
+            ./download_model.py --dorado dorado_models/${model_name}_url ;
+            mv dorado_models/${model_name} . ;
+            rm -r download_model.py dorado_models ;
         else
-            python ${rerio}/download_model.py --dorado ${rerio}/dorado_models/${model_name}_url
+            echo 'conda rerio download';
+            ${rerio}/download_model.py --dorado ${rerio}/dorado_models/${model_name}_url
             cp -r ${rerio}/dorado_models/${model_name} .
         fi
     """

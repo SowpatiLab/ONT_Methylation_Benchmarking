@@ -83,6 +83,7 @@ toolConfig:
   samtools: 
     cleanse_flags: -F 2304 --min-qlen 500
   modkit: 
+    install_dir: modkit
     executable: modkit
     version: 0.5.1-rc1
 
