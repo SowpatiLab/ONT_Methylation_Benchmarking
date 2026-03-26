@@ -87,7 +87,7 @@ toolConfig:
     executable: modkit
     version: 0.5.1-rc1
 
-default_conda_env: envs/benchmarking_env.yml
+default_conda_env: env/benchmarking_env.yml
 
 timit: true
 logit: true
