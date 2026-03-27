@@ -99,7 +99,17 @@ Creating conda environment
         # activate conda env
         conda activate benchmark_env
     ```
-5. Running the snakemake workflow:
+6. Install apptainer:
+    https://apptainer.org/
+
+    on a debian machine:
+   ```
+    sudo add-apt-repository -y ppa:apptainer/ppa
+    sudo apt update
+    sudo apt install -y apptainer-suid
+   ```
+
+7. Running the snakemake workflow:
     ```
     ## ensure snakemake is installed 
     snakemake --use-apptainer \

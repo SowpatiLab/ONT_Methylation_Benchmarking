@@ -12,7 +12,20 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [conda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview#windows-guides)  or [miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main)
 - [docker](https://www.docker.com/) or [apptainer](https://apptainer.org/)  or both
 
-### tooling dependencies (optional)
+### Other tooling dependencies
+- [biopython](https://biopython.org/)
+- [polars](https://pola.rs/)
+- [samtools](http://www.htslib.org/)
+- [bedtools](https://bedtools.readthedocs.io/)
+- [nanoq](https://github.com/esteinig/nanoq)
+- [nanoplot](https://github.com/wdecoster/nanoplot)
+- [nanostat](nanostat)
+
+> These can be installed using the [benchmark_nextflow/env/benchmarking_env.yml](benchmark_nextflow/env/benchmarking_env.yml) file
+
+> These will be expected to be installed in the environment if nextflow is run without any specific profiles
+
+### Tooling dependencies (optional)
 - [Dorado](https://github.com/nanoporetech/dorado) - v0.9.1/v1.1.1 <br/>
 - [DeepMod2](https://github.com/WGLab/DeepMod2/tree/main)<br/>
 - [DeepBAM](https://github.com/xiaochuanle/DeepBAM) - v0.1.0<br/>
