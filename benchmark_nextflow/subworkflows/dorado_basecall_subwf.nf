@@ -158,25 +158,27 @@ workflow DORADO_BASECALL_MODIFIED {
             .map{ key, dorver, base, mod, exp -> [exp, key, dorver, base, mod, file("${params.pod5dir}/${exp}_5kHz"),  file(fetch_ref(exp))]}
 
         // mod basecall stage
-        dorado_mod(dorado_mod_inputs)
-        samtools_mod_cleanse(dorado_mod.output)
-        
-        def modkit_exec = Channel.empty()
-        if(IS_CONTAINERISED){
-            modkit_exec = Channel.of('modkit')
-        }else{
-            install_modkit()
-            modkit_exec = install_modkit.output
-        }
-        
-        mokit_pileup_in = modkit_exec
-            .combine(samtools_mod_cleanse.output)
+        if (params.install==null){
+            dorado_mod(dorado_mod_inputs)
+            samtools_mod_cleanse(dorado_mod.output)
+            
+            def modkit_exec = Channel.empty()
+            if(IS_CONTAINERISED){
+                modkit_exec = Channel.of('modkit')
+            }else{
+                install_modkit()
+                modkit_exec = install_modkit.output
+            }
+            
+            mokit_pileup_in = modkit_exec
+                .combine(samtools_mod_cleanse.output)
 
-        modkit_pileup(mokit_pileup_in)
-        
-        attachReferenceFiles(modkit_pileup.output, reference_map_ch) | 
-            modkit_add_ref
-            standardise_dorado(modkit_add_ref.output)
+            modkit_pileup(mokit_pileup_in)
+            
+            attachReferenceFiles(modkit_pileup.output, reference_map_ch) | 
+                modkit_add_ref
+                standardise_dorado(modkit_add_ref.output)
+        }
 }
 
 
@@ -219,8 +221,10 @@ workflow DORADO_BASECALL_MOVETABLE {
             .unique()
             .map{ model_alias, dorver, base, key, exp -> [ exp, key, dorver, base, file("${params.pod5dir}/${exp}_5kHz"),  file(fetch_ref(exp)) ]}
         
-        dorado_move(dorado_move_inputs)
-        samtools_move_cleanse(dorado_move.output)
+        if (params.install==null) {
+            dorado_move(dorado_move_inputs)
+            samtools_move_cleanse(dorado_move.output)
+        }
 
         if(generate_fastq_flag){
             bam_to_fastq(samtools_move_cleanse.output)

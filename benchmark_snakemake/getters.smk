@@ -183,7 +183,7 @@ toolingDir = "" if config.get('tooling_dir')=="" or config.get('tooling_dir') is
 
 
 DORADO_HOME   = fetch_exec('dorado')
-RERIO_RUN     = fetch_exec('rerio')
+RERIO_RUN     = f'{config['tooling_dir']}/rerio/download_model.py'
 ROCKFISH      = "rockfish"
 DEEPMOD2      = fetch_exec('deepmod2')
 F5C           = fetch_exec('f5c')

@@ -31,72 +31,75 @@ include { INSTALL_ALL_TOOLS } from './subworkflows/install.nf'
 
 workflow {
 
-    if (params.install!=null){
-        print('running install workflow')
-        INSTALL_ALL_TOOLS()
+    // if (params.install!=null){
+    //     print('running install workflow')
+    //     INSTALL_ALL_TOOLS()
+    // }
+    // else {
+    def reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
+    def reference_map_ob = Channel.fromList(params.runControls.experiments)
+                .combine(Channel.of(params.pod5dir))
+                .map{ p5, dir -> [ 
+                    "${p5}_5kHz", 
+                    file("${dir}/${p5}_5kHz"), 
+                    file(reference_map['references'][p5.split('_')[0]])
+                ]}
+    
+    mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
+
+    def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
+    def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00        // return 2 f other tools are activated
+    def run_selector =  run_qc + others
+
+    models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
+    models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
+
+    // if qc is activate d set default model to v5r3
+    models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
+    model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
+    
+    // create a model lookup for later
+    model_setup = Channel
+        .from(model_lookup_all)
+        .map { m, v -> [params.toolConfig.dorado.dorado_version_map["5kHz_${v.split('r')[0]}"], m, v] }
+        .unique()
+
+    // isolate unique dorado versions that need to be installed
+    experiment_list = Channel.fromList(params.runControls.experiments)
+    accuracy_list   = Channel.fromList(params.runControls.accuracy)
+    install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
+    dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
+
+    /* DORADO SETUP */
+    DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
+
+    run_mod = DORADO_SETUP.out.run_mod
+    run_move = DORADO_SETUP.out.run_move
+    dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
+    download_dorado_base_model = DORADO_SETUP.out.download_dorado_base_model
+
+    // RUN DORADO BASECALLER for MODIFIED BASES
+    if(models_lookup_mods.size() > 0){
+        def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
+
+        DORADO_BASECALL_MODIFIED(
+            reference_map,
+            run_mod,
+            experiment_list,
+            accuracy_list,
+            basecall_model_list_mod,
+            params.runControls.black_list_models,
+            dorado_mod_run_channels,
+            download_dorado_base_model
+        )
     }
-    else {
-        def reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
-        def reference_map_ob = Channel.fromList(params.runControls.experiments)
-                    .combine(Channel.of(params.pod5dir))
-                    .map{ p5, dir -> [ 
-                        "${p5}_5kHz", 
-                        file("${dir}/${p5}_5kHz"), 
-                        file(reference_map['references'][p5.split('_')[0]])
-                    ]}
+
+    
+    if(run_selector>0){
+        if (params.install!=null){
+            INSTALL_ALL_TOOLS()
+        } else {
         
-        mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
-
-        def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
-        def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00        // return 2 f other tools are activated
-        def run_selector =  run_qc + others
-
-        models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
-        models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
-
-        // if qc is activate d set default model to v5r3
-        models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
-        model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
-        
-        // create a model lookup for later
-        model_setup = Channel
-            .from(model_lookup_all)
-            .map { m, v -> [params.toolConfig.dorado.dorado_version_map["5kHz_${v.split('r')[0]}"], m, v] }
-            .unique()
-
-        // isolate unique dorado versions that need to be installed
-        experiment_list = Channel.fromList(params.runControls.experiments)
-        accuracy_list   = Channel.fromList(params.runControls.accuracy)
-        install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
-        dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
-
-        install_versions.view()
-        /* DORADO SETUP */
-        DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
-
-        run_mod = DORADO_SETUP.out.run_mod
-        run_move = DORADO_SETUP.out.run_move
-        dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
-        download_dorado_base_model = DORADO_SETUP.out.download_dorado_base_model
-
-        // RUN DORADO BASECALLER for MODIFIED BASES
-        if(models_lookup_mods.size() > 0){
-            def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
-            
-            DORADO_BASECALL_MODIFIED(
-                reference_map,
-                run_mod,
-                experiment_list,
-                accuracy_list,
-                basecall_model_list_mod,
-                params.runControls.black_list_models,
-                dorado_mod_run_channels,
-                download_dorado_base_model
-            )
-        }
-
-        if(run_selector>0){
-            
             def basecall_model_list_base = Channel.fromList(params.runControls.other_tools.values().flatten())
                 .unique()
                 .ifEmpty { params.runControls.qc.default_model }
