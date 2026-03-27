@@ -26,178 +26,181 @@ include {
     nanoq;
 } from './modules/qc.nf'
 
-
+include { INSTALL_ALL_TOOLS } from './subworkflows/install.nf'
 // includeConfig
 
 workflow {
 
-    def reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
-    def reference_map_ob = Channel.fromList(params.runControls.experiments)
-                .combine(Channel.of(params.pod5dir))
-                .map{ p5, dir -> [ 
-                    "${p5}_5kHz", 
-                    file("${dir}/${p5}_5kHz"), 
-                    file(reference_map['references'][p5.split('_')[0]])
-                ]}
-    
-    mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
-
-    def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
-    def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00        // return 2 f other tools are activated
-    def run_selector =  run_qc + others
-
-    models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
-    models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
-
-    // if qc is activate d set default model to v5r3
-    models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
-    model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
-    
-    // create a model lookup for later
-    model_setup = Channel
-        .from(model_lookup_all)
-        .map { m, v -> [params.toolConfig.dorado.dorado_version_map["5kHz_${v.split('r')[0]}"], m, v] }
-        .unique()
-
-    // isolate unique dorado versions that need to be installed
-    experiment_list = Channel.fromList(params.runControls.experiments)
-    accuracy_list   = Channel.fromList(params.runControls.accuracy)
-    install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
-    dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
-
-
-    /* DORADO SETUP */
-    // // install dorado if not exist
-    // // check required models and determine which dorado versions to download
-    
-    DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
-
-    run_mod = DORADO_SETUP.out.run_mod
-    run_move = DORADO_SETUP.out.run_move
-    dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
-    download_dorado_base_model = DORADO_SETUP.out.download_dorado_base_model
-
-    // RUN DORADO BASECALLER for MODIFIED BASES
-    if(models_lookup_mods.size() > 0){
-        def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
-        
-        DORADO_BASECALL_MODIFIED(
-            reference_map,
-            run_mod,
-            experiment_list,
-            accuracy_list,
-            basecall_model_list_mod,
-            params.runControls.black_list_models,
-            dorado_mod_run_channels,
-            download_dorado_base_model
-        )
+    if (params.install!=null){
+        print('running install workflow')
+        INSTALL_ALL_TOOLS()
     }
-
-    if(run_selector>0){
+    else {
+        def reference_map = new groovy.yaml.YamlSlurper().parseText(file(params.references).text)
+        def reference_map_ob = Channel.fromList(params.runControls.experiments)
+                    .combine(Channel.of(params.pod5dir))
+                    .map{ p5, dir -> [ 
+                        "${p5}_5kHz", 
+                        file("${dir}/${p5}_5kHz"), 
+                        file(reference_map['references'][p5.split('_')[0]])
+                    ]}
         
-        def basecall_model_list_base = Channel.fromList(params.runControls.other_tools.values().flatten())
+        mod_list_filter = params.runControls.dorado_mod_models.findAll { e -> !e.value.isEmpty() }
+
+        def run_qc = params.runControls.qc.tools.values().findAll{ it==true }.size() > 0 ? 0b01 : 0b00 // return 1 if qc tools are activated
+        def others = params.runControls.other_tools.values().flatten().size() > 0 ? 0b10 : 0b00        // return 2 f other tools are activated
+        def run_selector =  run_qc + others
+
+        models_lookup_mods = params.runControls.dorado_mod_models.collectMany { k, vs -> vs.collect { v -> [k, v] } } // fetch mod models to run
+        models_lookup_move = params.runControls.other_tools.collectMany { k, vs -> vs.collect { v -> [k, v] } }       // fetch move models to run
+
+        // if qc is activate d set default model to v5r3
+        models_lookup_move = (run_qc==1 && models_lookup_move.size()==0) ? [['qc', params.runControls.qc.default_model]] : models_lookup_move
+        model_lookup_all = models_lookup_mods + models_lookup_move  // combine both
+        
+        // create a model lookup for later
+        model_setup = Channel
+            .from(model_lookup_all)
+            .map { m, v -> [params.toolConfig.dorado.dorado_version_map["5kHz_${v.split('r')[0]}"], m, v] }
             .unique()
-            .ifEmpty { params.runControls.qc.default_model }
 
-        def run_f5c     = params.runControls.other_tools.f5c.size() > 0
-        def run_f5c_stranded =  params.runControls.other_tools.f5c_stranded.size()  > 0
-        def run_rockfish = params.runControls.other_tools.rockfish.size()>0
-        def run_deepMod2_transformer = params.runControls.other_tools.deepmod2_transformer.size()>0
-        def run_deepMod2_bilstm = params.runControls.other_tools.deepmod2_bilstm.size()>0
-        def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
-        def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
+        // isolate unique dorado versions that need to be installed
+        experiment_list = Channel.fromList(params.runControls.experiments)
+        accuracy_list   = Channel.fromList(params.runControls.accuracy)
+        install_versions = model_setup.map { dorver, m, v -> dorver }.unique()
+        dorver_nam_aliases = params.toolConfig.dorado.dorado_version_aliases.collectEntries { key, value -> [(value): key] }
 
-        def generate_fastq = ( run_selector==1 || run_f5c || run_f5c_stranded )
-        
-        DORADO_BASECALL_MOVETABLE(
-            run_move,
-            experiment_list,
-            accuracy_list,
-            basecall_model_list_base,
-            download_dorado_base_model,
-            generate_fastq
-        )
+        install_versions.view()
+        /* DORADO SETUP */
+        DORADO_SETUP( experiment_list, accuracy_list, model_setup, install_versions, dorver_nam_aliases )
 
-        samtools_cleansed = DORADO_BASECALL_MOVETABLE.out.samtools_cleansed
-        fastq = DORADO_BASECALL_MOVETABLE.out.fastq
+        run_mod = DORADO_SETUP.out.run_mod
+        run_move = DORADO_SETUP.out.run_move
+        dorado_mod_run_channels = DORADO_SETUP.out.dorado_mod_run_channels
+        download_dorado_base_model = DORADO_SETUP.out.download_dorado_base_model
 
-        /* ROCKFISH */
-        if(run_rockfish){
-            ROCKFISH_SUBWORKFLOW( reference_map, samtools_cleansed, reference_map_ob )
+        // RUN DORADO BASECALLER for MODIFIED BASES
+        if(models_lookup_mods.size() > 0){
+            def basecall_model_list_mod = Channel.fromList(params.runControls.dorado_mod_models.values().flatten())
+            
+            DORADO_BASECALL_MODIFIED(
+                reference_map,
+                run_mod,
+                experiment_list,
+                accuracy_list,
+                basecall_model_list_mod,
+                params.runControls.black_list_models,
+                dorado_mod_run_channels,
+                download_dorado_base_model
+            )
         }
 
-        /* DEEPOMOD2 */
-        if( run_deepMod2_transformer || run_deepMod2_bilstm ){
+        if(run_selector>0){
+            
+            def basecall_model_list_base = Channel.fromList(params.runControls.other_tools.values().flatten())
+                .unique()
+                .ifEmpty { params.runControls.qc.default_model }
 
-            deepmod2_exec = DEEPMOD2_setup()
-            if(run_deepMod2_transformer) {
-                DEEPMOD2_WORKFLOW_TRANSFORMER (
-                    deepmod2_exec,
-                    reference_map,
-                    samtools_cleansed,
-                    reference_map_ob,
-                    'transformer'
-                )
-            }
-            if(run_deepMod2_bilstm) {
-                DEEPMOD2_WORKFLOW_BILSTM (
-                    deepmod2_exec,
-                    reference_map,
-                    samtools_cleansed,
-                    reference_map_ob,
-                    'BiLSTM'
-                )
-            }
-        }
-        /* F5C */
-        if(run_f5c || run_f5c_stranded){
-            F5C_GENERAL_WORKFLOW(fastq, reference_map_ob)
-            def f5c_setup = F5C_GENERAL_WORKFLOW.out.setup_f5c
-            def f5c_call  = F5C_GENERAL_WORKFLOW.out.f5c_call
+            def run_f5c     = params.runControls.other_tools.f5c.size() > 0
+            def run_f5c_stranded =  params.runControls.other_tools.f5c_stranded.size()  > 0
+            def run_rockfish = params.runControls.other_tools.rockfish.size()>0
+            def run_deepMod2_transformer = params.runControls.other_tools.deepmod2_transformer.size()>0
+            def run_deepMod2_bilstm = params.runControls.other_tools.deepmod2_bilstm.size()>0
+            def run_deepBAM   = params.runControls.other_tools.deepbam.size() > 0
+            def run_deepPlant = params.runControls.other_tools.deepplant.size() > 0
 
-            if(run_f5c) {
-                F5C_UNSTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
-            }
-            if(run_f5c_stranded){
-                F5C_RESTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
-            }
-        }
-        /* DeepTools */
-        
-        if(run_deepBAM || run_deepPlant){
-            def bam_fn_reorder = DEEPTOOLS_GENERAL_SUBWORKFLOW( samtools_cleansed )
+            def generate_fastq = ( run_selector==1 || run_f5c || run_f5c_stranded )
+            
+            DORADO_BASECALL_MOVETABLE(
+                run_move,
+                experiment_list,
+                accuracy_list,
+                basecall_model_list_base,
+                download_dorado_base_model,
+                generate_fastq
+            )
 
-            /* DEEPBAM */
-            if(run_deepBAM){
-                if(workflow.containerEngine!=null){
-                    DEEPBAM_SUBWORKFLOW(
+            samtools_cleansed = DORADO_BASECALL_MOVETABLE.out.samtools_cleansed
+            fastq = DORADO_BASECALL_MOVETABLE.out.fastq
+
+            /* ROCKFISH */
+            if(run_rockfish){
+                ROCKFISH_SUBWORKFLOW( reference_map, samtools_cleansed, reference_map_ob )
+            }
+
+            /* DEEPMOD2 */
+            if( run_deepMod2_transformer || run_deepMod2_bilstm ){
+
+                deepmod2_exec = DEEPMOD2_setup()
+                if(run_deepMod2_transformer) {
+                    DEEPMOD2_WORKFLOW_TRANSFORMER (
+                        deepmod2_exec,
                         reference_map,
-                        bam_fn_reorder,
-                        reference_map_ob
-                    )
-                }else{
-                    log.warn "skipping DeepBAM: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
-                }
-            }
-            /* DEEP_PLANT */
-            if(run_deepPlant){
-                if(workflow.containerEngine!=null){
-                    DEEPPLANT_SUBWORKFLOW(
-                        reference_map,
-                        bam_fn_reorder,
+                        samtools_cleansed,
                         reference_map_ob,
+                        'transformer'
                     )
-                }else{
-                    log.warn "skipping DeepPlant: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                }
+                if(run_deepMod2_bilstm) {
+                    DEEPMOD2_WORKFLOW_BILSTM (
+                        deepmod2_exec,
+                        reference_map,
+                        samtools_cleansed,
+                        reference_map_ob,
+                        'BiLSTM'
+                    )
                 }
             }
-        }
-        
-        if(run_qc>0){
-            if(params.runControls.qc.tools.nanostat==true) { nanostat(samtools_cleansed) }
-            if(params.runControls.qc.tools.nanoplot==true) { nanoplot(samtools_cleansed) }
-            if(params.runControls.qc.tools.mosdepth==true) { mosdepth(samtools_cleansed) }
-            if(params.runControls.qc.tools.nanoq==true) { nanoq(fastq) }
+            /* F5C */
+            if(run_f5c || run_f5c_stranded){
+                F5C_GENERAL_WORKFLOW(fastq, reference_map_ob)
+                def f5c_setup = F5C_GENERAL_WORKFLOW.out.setup_f5c
+                def f5c_call  = F5C_GENERAL_WORKFLOW.out.f5c_call
+
+                if(run_f5c) {
+                    F5C_UNSTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
+                }
+                if(run_f5c_stranded){
+                    F5C_RESTRANDED_WORKFLOW(reference_map, f5c_setup, f5c_call)
+                }
+            }
+            /* DeepTools */
+            
+            if(run_deepBAM || run_deepPlant){
+                def bam_fn_reorder = DEEPTOOLS_GENERAL_SUBWORKFLOW( samtools_cleansed )
+
+                /* DEEPBAM */
+                if(run_deepBAM){
+                    if(workflow.containerEngine!=null){
+                        DEEPBAM_SUBWORKFLOW(
+                            reference_map,
+                            bam_fn_reorder,
+                            reference_map_ob
+                        )
+                    }else{
+                        log.warn "skipping DeepBAM: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                    }
+                }
+                /* DEEP_PLANT */
+                if(run_deepPlant){
+                    if(workflow.containerEngine!=null){
+                        DEEPPLANT_SUBWORKFLOW(
+                            reference_map,
+                            bam_fn_reorder,
+                            reference_map_ob,
+                        )
+                    }else{
+                        log.warn "skipping DeepPlant: this tool is not supported on -profile ${workflow.profile} | try using docker/apptainer prifiles"
+                    }
+                }
+            }
+            
+            if(run_qc>0){
+                if(params.runControls.qc.tools.nanostat==true) { nanostat(samtools_cleansed) }
+                if(params.runControls.qc.tools.nanoplot==true) { nanoplot(samtools_cleansed) }
+                if(params.runControls.qc.tools.mosdepth==true) { mosdepth(samtools_cleansed) }
+                if(params.runControls.qc.tools.nanoq==true) { nanoq(fastq) }
+            }
         }
     }
 }

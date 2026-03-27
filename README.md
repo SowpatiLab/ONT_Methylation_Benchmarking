@@ -175,8 +175,11 @@ Furthermore an [example](example) directory has been provided with an a sample p
 ### With Nextflow
 Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow/workflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow readme.md](benchmark_nextflow/readme.md) file.
 
+> For a full step-by-step tutorial refer [tutorial.md](tutorial.md).
+
 ## Contact
 In case of any queries/suggestions, contact
 
 Onkar Kulkarni - onkar {at} ccmb {dot} res {dot} in <br>
 Divya Tej Sowpati - tej {at} ccmb {dot} res {dot} in
+

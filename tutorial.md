@@ -9,7 +9,7 @@ You can also run the pipeline using your own dataset by replacing the example da
 Creating conda environment
 
 ## Setting up the environment
-1. `sudo apt update && sudo apt install openjdk-17-jdk git wget -y` (if on a debian machine)
+1. `sudo apt update && sudo apt install samtools openjdk-17-jdk git wget -y` (if on a debian machine)
 2. Install [docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04)
     - setup docker to run without sudo
         ```bash
@@ -19,9 +19,19 @@ Creating conda environment
         ```
     - test if everything is working: 
         ```
-            docker run hello-world
+        docker run hello-world
         ```
-3. Install conda:
+3. Install apptainer:
+    https://apptainer.org/
+
+    on a debian machine:
+   ```
+    sudo add-apt-repository -y ppa:apptainer/ppa
+    sudo apt update
+    sudo apt install -y apptainer-suid
+   ```
+
+4. Install conda:
     ```
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
     bash miniconda.sh -b -u
@@ -29,18 +39,18 @@ Creating conda environment
     source ~/.bashrc 
     conda tos accept
     ```
-4. Install [nextflow](https://www.nextflow.io/) 
+5. Install [nextflow](https://www.nextflow.io/) 
     ```
     curl -s https://get.nextflow.io | bash
     echo 'alias nextflow='$(realpath nextflow) >> ~/.bashrc
     source ~/.bashrc
     ```
-5. Pull github repo:
+6. Pull github repo:
     ```
     git clone https://github.com/SowpatiLab/ONT_Methylation_Benchmarking.git 
     cd ONT_Methylation_Benchmarking
     ```
-4. Index reference files
+7. Index reference files
     All the reference files are expected to be indexed first.
     ```
         samtools faidx example/references/H.pylori_J99_ATCC700824.fa
@@ -50,8 +60,9 @@ Creating conda environment
     ```
     > **Note:** This is for the example reference file in the example folder. All other references need to be indexed in the same fashion.
 
-4. Running the nextflow workflow:
+8. Running the nextflow workflow:
     ```
+    # change directory to example
     cd example
 
     # run nextflow with conda 
@@ -63,7 +74,9 @@ Creating conda environment
 
     # running with docker profile
     # only run once 
+    
     docker pull sowpati/ont-methylation-benchmarking:latest
+
     [ ! -d tooling/rockfish_models ] && mkdir -p tooling/rockfish_models
     docker run -v $(pwd):$(pwd) -w $(pwd) \
         sowpati/ont-methylation-benchmarking:latest rockfish download \
@@ -83,51 +96,30 @@ Creating conda environment
         --threads 10 \
         --memory  32.GB
     ```
-5. Installing [Snakemake](https://snakemake.readthedocs.io/en/stable/)
+9. Installing [Snakemake](https://snakemake.readthedocs.io/en/stable/)
     ```
-        # option 1:
-        conda create \
-            -c conda-forge \
-            -c bioconda -c nodefaults \
-            -n benchmark_env snakemake
+    # option 1:
+    conda create \
+        -c conda-forge \
+        -c bioconda -c nodefaults \
+        -n benchmark_env snakemake
 
-        # option 2:
-        conda env create \
-            -n benchmark_env \
-            -f benchmark_nextflow/envs/benchmarking_env.yml
-        
-        # activate conda env
-        conda activate benchmark_env
+    # option 2:
+    conda env create \
+        -n benchmark_env \
+        -f benchmark_nextflow/envs/benchmarking_env.yml
+    
+    # activate conda env
+    conda activate benchmark_env
     ```
-6. Install apptainer:
-    https://apptainer.org/
 
-    on a debian machine:
-   ```
-    sudo add-apt-repository -y ppa:apptainer/ppa
-    sudo apt update
-    sudo apt install -y apptainer-suid
-   ```
-
-7. Running the snakemake workflow:
+10. Running the snakemake workflow:
     ```
     ## ensure snakemake is installed 
     snakemake --use-apptainer \
         ../benchmark_snakemake/snakefile \
         --cores 10
     ```
-
-## Basic dependencies required to run the workflow
-- snakemake
-- [samtools](https://www.htslib.org/) >=v1.16
-- [bedtools](https://bedtools.readthedocs.io/en/latest/) 
-- [pod5-api](https://pod5-file-format.readthedocs.io/en/0.1.21/docs/install.html)
-
-> <b>Note: </b>all of these can be installed directly using the environment setup yml as follows:
-```bash
-    conda env create -f env.yml -n benchmark_nextflow/envs/benchmarking_env.yml
-    conda activate benchmark_env
-```
 
 ## Final folder structure 
 <pre>

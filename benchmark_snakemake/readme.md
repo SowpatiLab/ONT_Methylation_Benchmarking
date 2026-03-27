@@ -33,7 +33,11 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [Mokit](https://github.com/nanoporetech/modkit) - v0.5.1-rc1<br/>
 
 Unlike the nextflow implementstion, the dependedencies will not get automatically installed by this workflow, and hence expects the user to preinstall the dependencies and mention the appropriate install directories and executable names in the [config.yaml](../config.yaml) file.
+
 Alternatively, by using the `--use-apptainer` when running the workflow will auto fetch a pre-packaged [docker-image](https://hub.docker.com/r/sowpati/ont-methylation-benchmarking/tags) that contains all the necessary dependencies for this workflow to run successfully.
+
+or the tools can be installed by running the nextflow workflow using the '--install' flag: 
+`nextflow run benchmark_nextflow --install -config-file config.yaml`, this installs all the tools locally, including their respective conda environments (except for DeepBAM and DeepPlant)
 
 ## pre-requisites to workflow setup
 
