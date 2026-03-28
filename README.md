@@ -1,10 +1,22 @@
 # ONT Methylation Benchmarking
 This repository contains the scripts and code that was used for benchmarking various tools and models for Oxford Nanopore (ONT) sequencing based identification of DNA methylation. The corresponding preprint is [here](https://doi.org/10.1101/2024.11.09.622763) and the raw data aswell as the processed data has been made opensource on the [Registry of Open Data on AWS (RODA)](https://registry.opendata.aws/ont_basemod_data/)
 
-<!-- ## Contents
-The code is organized into two main directories:
-* Processing scripts
-* Plotting scripts -->
+## Contents
+The repository is organized into the following directories:
+* benchmark_nextflow
+* benchmark_snakemake
+* example
+* plotting_scripts
+* processing_scripts
+
+### Benchmark Nextflow
+Nextflow pipelines to reproduce the analysis of various tools on datasets used in the study. With suitable modifications (see details below) you can run the same pipeline on new datasets as well
+
+### Benchmark Snakemake
+Snakemake pipelines to reproduce the analysis. They are trickier to run using Docker, but singularity works fine. Details to run using new datasets are provided in the tutorial below.
+
+### Example
+A folder with a small test dataset and reference genome to test whether everything is working as expected
 
 ### Processing scripts
 This directory contains all the code that was required to convert various modkit/bismark outputs into dataframes that can be used for comparison. In addition, there are also scripts that were used to subsample the data to various coverages, and to filter out reads under a specific q score.
