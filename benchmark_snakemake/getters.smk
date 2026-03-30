@@ -1,6 +1,8 @@
 configfile: 'config.yaml'
 configfile: config["references"]
 
+container: "docker://sowpati/ont-methylation-benchmarking:latest"
+
 Path(f"log").mkdir(parents=True, exist_ok=True)
 
 wildcard_constraints:
@@ -284,7 +286,6 @@ def fetch_qc_tool_list(tool):
     if not config['runControls']['qc']['tools'][tool]: return []
     else: return expand(config['output_dir'] + "/" + f"qc/{tool}/{{experiment}}_5kHz_{{acc}}_{{ver}}{ext[tool]}", experiment=EXPS, acc=ACC, ver=select_QC_default_model())
 
-singularity: "/data1/ccmb/reuben/benchmarking/rework_pipelines/ont-methylation-benchmarking.sif"
 # LOAD OTHER TOOLS =================================>
 include: 'modules_smk/rockfish.smk'
 include: 'modules_smk/deepplant.smk'

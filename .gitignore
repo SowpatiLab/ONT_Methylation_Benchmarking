@@ -1,5 +1,5 @@
 docker_build_assets
-.vscode
+.vscode/*
 .nextflow
 .snakemake
 example/work
