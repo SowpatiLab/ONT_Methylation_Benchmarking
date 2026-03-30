@@ -138,7 +138,7 @@ def select_dorado(wildcards, input, output):
     sr, acc, ver = re.search(r'.*_([45]kHz)_(sup|hac|fast)_(v[45.2]+)r[123]', Path(output[0]).stem).group(1,2,3)
 
     dorado_ver = config['toolConfig']['dorado']['dorado_version_map'][f'{sr}_{ver}'] 
-    return config['toolConfig']['dorado']['dorado_version_aliases'][dorado_ver]
+    return dorado_ver #config['toolConfig']['dorado']['dorado_version_aliases'][dorado_ver]
 
 # tool setup
 TOOLS    = config['toolConfig']

@@ -21,7 +21,7 @@ Since multiple tools are being benchnarked at once, there are multiple dependenc
 - [nanoplot](https://github.com/wdecoster/nanoplot)
 - [nanostat](nanostat)
 
-> These can be installed using the [benchmark_snakemake/envs/benchmarking_env.yml](benchmark_snakemake/envs/benchmarking_env.yml) file.
+> These can be installed using the [benchmark_snakemake/env/benchmarking_env.yml](benchmark_snakemake/env/benchmarking_env.yml) file.
 
 ### Tooling dependencies (optional)
 - [Dorado](https://github.com/nanoporetech/dorado) - v0.9.1/v1.1.1 <br/>
@@ -260,7 +260,7 @@ In this example:
     ## setup conda env
     conda env create \
         -n benchmark_env \
-        -f ./envs/benchmarking_env.yml
+        -f ./benchmark_snakemake/env/benchmarking_env.yml
 
     conda activate benchmark_env
     snakemake \

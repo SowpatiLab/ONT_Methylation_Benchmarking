@@ -246,7 +246,7 @@ rule mosdepth:
     output: directory(config['output_dir'] + "/" + "qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}")
     log:    "log/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
-    conda: 'envs/mosdepth_env.yml'
+    conda: 'env/mosdepth_env.yml'
     params: basename=subpath(output[0], basename=True)
     shell: ntsh("mkdir -p {output}; {TIME} mosdepth -t {threads} {output}/{params.basename} {input}")
 
