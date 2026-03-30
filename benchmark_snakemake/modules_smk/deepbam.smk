@@ -81,7 +81,7 @@ rule consolidate_deepbam:
     input:  config['output_dir'] + "/" + "tool_out/deepbam/agg_fasta/{experiment}_{sr}kHz_{acc}_v{ver}.deepbam.aggregated.rebed.ref.tsv"
     output: config['output_dir'] + "/" + "meta/deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.deepbam.aggregated.rebed.ref.std.bed"
     threads: 20
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log: "log/consolidate_deepbam/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     params: script_dir=Path(f"{workflow.basedir}/scripts_common") 
     shell: sh("python {params.script_dir}/deeptools_consolidate.py {input} {output}")

@@ -86,7 +86,7 @@ rule f5c_restrand:
     threads: 20
     params: 
         ref=getRef,
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/f5c_restrand.py -i {input} -r {params.ref} -o {output}")
 
 rule f5c_aggregate:
@@ -147,6 +147,6 @@ rule consolidate_f5c:
     output: config['output_dir'] + "/" + "meta/f5c{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}.f5c{stranded_ext}.aggregated.rebed.ref.std.bed"
     threads: 20
     log: "log/consolidate_f5c{strandstate}/{experiment}_{sr}kHz_{acc}_v{ver}{stranded_ext}.log"
-    conda:  config['default_conda_env']
-    params: script_dir=Path(workflow.basedir) / "scripts_common"
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
+    params: script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/f5c_consolidate.py {input} {output}")

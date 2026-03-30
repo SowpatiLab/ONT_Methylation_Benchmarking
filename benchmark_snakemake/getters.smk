@@ -1,7 +1,12 @@
 configfile: 'config.yaml'
 configfile: config["references"]
 
+config['scripts_common'] = os.path.realpath(
+    os.path.join(workflow.basedir, "./scripts_common")
+)
+
 container: "docker://sowpati/ont-methylation-benchmarking:latest"
+# container: image("docker://sowpati/ont-methylation-benchmarking:latest", singularity_args=f"--nv -B {workflow.basedir}:{workflow.basedir}" )
 
 Path(f"log").mkdir(parents=True, exist_ok=True)
 

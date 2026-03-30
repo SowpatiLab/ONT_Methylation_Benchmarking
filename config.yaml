@@ -66,7 +66,7 @@ toolConfig:
     call_flags: --cuda-dev-id 0 -x hpc-high -K 2048 -B 40.0M --pore r10
   deepplant: 
     install_dir: DeepPlant
-    executable: build/DeepPlant
+    executable: DeepPlant
     conda: DeepPlant 
     model_dir: DeepPlant_models
     model: bilstm/
@@ -74,7 +74,7 @@ toolConfig:
     aggregation_flags: --threshold 0.5
   deepbam: 
     install_dir: tools/DeepBAM
-    executable: cpp/build/DeepBAM
+    executable: DeepBAM
     conda: DeepBAM
     model_dir: DeepBAM_models
     model: LSTM_20240524_newfeature_script_b9_s15_epoch25_accuracy0.9742.pt

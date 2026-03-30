@@ -96,7 +96,7 @@ for mode in ['move', 'mod']:
             dorver=select_dorado,
             run_flags=config['toolConfig']['dorado']['run_flags'],
             mod_flag="--modified-bases-models" if mode=="mod" else "--emit-moves"
-        conda: config['default_conda_env']
+        conda: str(workflow.basedir) + "/" + config['default_conda_env']
         shell: sh("""
             if  [ -f /.dockerenv ];
             then
@@ -119,7 +119,7 @@ if NRUNS!=0:
         input:  expand(config['output_dir'] + "/" + "bam/sorted_sep_{{doradomode}}/{{experiment}}_run{run}_{{sr}}kHz_{{acc}}_v{{ver}}{{mod}}.bam", run=RUNS)
         output: config['output_dir'] + "/" + "bam/sorted_{doradomode}/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.bam"
         threads: 40
-        conda: config['default_conda_env']
+        conda: str(workflow.basedir) + "/" + config['default_conda_env']
         shell: sh("{SAMTOOLS} merge -@ {threads} -O BAM -o {output} {input} --write-index")
 
 rule cleanse_bams:
@@ -127,7 +127,7 @@ rule cleanse_bams:
     output: config['output_dir'] + "/" + "bam/sorted_{doradomode}_cleansed/{sample}.cleansed.bam"
     log:    "log/{doradomode}_cleanser/{sample}.log"
     threads: 20
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     params: 
         std_chroms=fetch_chrom_str,
         cleanse_flags=config['toolConfig']['samtools']['cleanse_flags']
@@ -159,7 +159,7 @@ rule modkit:
     output: config['output_dir'] + "/" + "tool_out/dorado/pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.bed"
     threads: 40
     log:    "log/modkit_pileup/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     params: 
         ref=getRef,
         set_params=modkit_set_params
@@ -172,7 +172,7 @@ rule addfasta:
         genome=lambda wildcards: re.sub(r'.fa(sta|)', '.genome', getRef(wildcards))
     output: config['output_dir'] + "/" + "tool_out/dorado/ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.ref.bed"
     threads: 20
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log: "log/modkit_ref/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
     shell: sh("{BEDTOOLS} slop -i {input.bed} -g {input.genome} -l 5 -r 11 -s | {BEDTOOLS} getfasta -fi {input.fasta} -bed - -tab -s | cut -f 2 | paste -d '\t'  {input.bed} - > {output}")
 
@@ -181,8 +181,8 @@ rule modkit_add_metadata:
     output: config['output_dir'] + "/" + "meta/dorado/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.cleansed.ref.std.tsv"
     log: "log/metadata/{experiment}_{sr}kHz_{acc}_v{ver}{mod}.log"
     threads: 20
-    conda: config['default_conda_env']
-    params: script_dir=Path(workflow.basedir) / "scripts_common"
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
+    params: script_dir=config['scripts_common']
     shell: "python {params.script_dir}/modkit_consolidate.py {input} {output}"
 
 # rule annotate:
@@ -190,7 +190,7 @@ rule modkit_add_metadata:
 #     output: 
 #         full="meta_context/{tool}/{file}",
 #     threads: 20
-#     conda: config['default_conda_env']
+#     conda: str(workflow.basedir) + "/" + config['default_conda_env']
 #     run:
 #         import polars as pl
 
@@ -213,7 +213,7 @@ rule bam_to_fastq:
     output: config['output_dir'] + "/" + "intermediary/fastq/{experiment}_{sr}kHz_{acc}_v{ver}.fastq"
     threads: 10
     log:  "log/bam_to_fastq/{experiment}_{sr}kHz_{acc}_v{ver}.log"
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     shell: sh("{SAMTOOLS} fastq -@ {threads} {input} -0 {output}")
 
 rule nanoq:
@@ -221,7 +221,7 @@ rule nanoq:
     output: config['output_dir'] + "/" + "qc/nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.nanoq"
     log:    "log/nanoq/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     shell:  sh("nanoq -s -i {input} > {output}" )
 
 rule nanostat:
@@ -229,14 +229,14 @@ rule nanostat:
     output: config['output_dir'] + "/" + "qc/nanostat/{experiment}_{sr}kHz_{acc}_v{ver}.nanostat"
     log:    "log/nanostat/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     threads: 10
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     shell:  sh("NanoStat --bam {input} > {output}") 
 
 rule nanoplot:
     input:  config['output_dir'] + "/" + "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
     output: directory(config['output_dir'] + "/" + "qc/nanoplot/{experiment}_{sr}kHz_{acc}_v{ver}")
     threads: 20
-    conda: config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     shell: sh('''
         mkdir -p {output}; NanoPlot --no_static --only-report --minqual 0 --bam {input} --raw --tsv_stats -t {threads} -o {output}
     ''')
@@ -256,7 +256,7 @@ rule mosdepth:
 #         total="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}.png",
 #         chroms="qc/mosdepth/{experiment}_{sr}kHz_{acc}_v{ver}_chroms.png"
 #     threads: 10
-#     conda: config['default_conda_env']
+#     conda: str(workflow.basedir) + "/" + config['default_conda_env']
 #     run:
 #         import polars as pl
 #         import seaborn as sns

@@ -25,7 +25,7 @@ rule download_rockfish_model:
     conda: config['toolConfig']['rockfish']['conda']
     params:
         save_dir=subpath(output[0], parent=True),
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: """
         [ ! -d {params.save_dir} ] && mkdir -p {params.save_dir} ;
         micromamba run -n rockfish python {params.script_dir}/rockfish_model_dl.py download -m 5kHz -s {params.save_dir}
@@ -75,7 +75,7 @@ rule rockfish_map:
     conda: config['toolConfig']['rockfish']['conda']
     params:
         ref=getRef,
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: ntsh("""
         if  [ -f /.dockerenv ];
         then
@@ -98,7 +98,7 @@ rule rockfish_intersect:
     log: "log/rockfish_intersect/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     priority: 1
     params: 
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/rockfish_intersect.py -i {input.pre} -r {input.ref} -o {output}")
 
 rule rockfish_aggregate:
@@ -107,7 +107,7 @@ rule rockfish_aggregate:
     threads: 20
     log: "log/rockfish_aggregate/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     params: 
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/rockfish_aggregate.py -i {input} -o {output}")
 
 rule rockfish_getfasta:
@@ -130,8 +130,8 @@ rule consolidate_rockfish:
     input:  config['output_dir'] + "/" + "tool_out/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.tsv"
     output: config['output_dir'] + "/" + "meta/rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.rockfish.aggregated.rebed.ref.std.bed"
     threads: 20
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log: "log/consolidate_rockfish/{experiment}_{sr}kHz_{acc}_v{ver}.log"
     params: 
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/rockfish_consolidate.py {input} {output}")

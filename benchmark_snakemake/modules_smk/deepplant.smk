@@ -2,7 +2,7 @@ rule bam_fn_reorder:
     input:  config['output_dir'] + "/" + "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam"
     output: config['output_dir'] + "/" + "bam/sorted_move_fnord/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
     log:    "log/sorted_move_by_fntag/{experiment}_{sr}kHz_{acc}_v{ver}.bam"
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     threads: 20
     resources:
         queue='hm-q',
@@ -59,11 +59,11 @@ rule deepplant_aggregate:
     input:  config['output_dir'] + "/" + "tool_out/deepplant/readwise/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.tsv"
     output: config['output_dir'] + "/" + "tool_out/deepplant/aggregated/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.tsv"
     threads: 20
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log:    "log/deepplant_aggregation/{experiment}_{sr}kHz_{acc}_v{ver}_{context}.log"
     params: 
         aggregation_flags=config['toolConfig']['deepbam']['aggregation_flags'],
-        script_dir=Path(workflow.basedir) / "scripts_common"
+        script_dir=config['scripts_common']
     shell:  sh("python {params.script_dir}/deepbam_aggregate.py \
                 --file_path  {input} \
                 --aggregation_output {output} {params.aggregation_flags}")
@@ -93,9 +93,9 @@ rule consolidate_deepplant:
     input:  config['output_dir'] + "/" + "tool_out/deepplant/agg_fasta/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.rebed.ref.tsv"
     output: config['output_dir'] + "/" + "meta/deepplant/{experiment}_{sr}kHz_{acc}_v{ver}.deepplant_{context}.aggregated.rebed.ref.std.bed"
     threads: 20
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log: "log/deepplant/{experiment}_{sr}kHz_{acc}_v{ver}_{context}.log"
-    params: script_dir=Path(workflow.basedir) / "scripts_common"
+    params: script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/deeptools_consolidate.py {input} {output}")
     # shell: "python {workflow.basedir}/scripts_common/deeptools_consolidate.py {input} {output}"
 

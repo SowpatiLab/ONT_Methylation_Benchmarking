@@ -16,16 +16,17 @@ def inferDeepMod2Model(wildcards):
     return models[f'{sr}kHz_{arch}_v{ver}']
 
 rule setup_deepmod2:
-    output: "{tooling}/setup_status/deepmod2.status"
+    output: config['tooling_dir'] + "/" + config['toolConfig']['deepmod2']['install_dir'] + "/" + config['toolConfig']['deepmod2']['executable']
     params: 
-        conda_env=config['toolConfig']['deepmod2']['conda']
+        conda_env=config['toolConfig']['deepmod2']['conda'],
+        install_dir=config['toolConfig']['deepmod2']['install_dir']
     container: None
     shell: """
         source "$(conda info --base)/etc/profile.d/conda.sh"
-        [ ! -d {wildcards.tooling} ] && mkdir {wildcards.tooling} -p
-        cd {wildcards.tooling}
 
-        git clone https://github.com/WGLab/DeepMod2.git deepmod2
+        [ ! -d {params.install_dir} ] && mkdir {params.install_dir} -p && cd $_
+
+        git clone https://github.com/WGLab/DeepMod2.git .
         cat deepmod2/src/detect.py \
             | perl -pe 's/^(from ont_fast5_api.*)/#\$1/' > tmp.txt;
         cat tmp.txt > deepmod2/src/detect.py;
@@ -43,7 +44,7 @@ rule setup_deepmod2:
 
 rule deepmod2_call:
     input:  
-        setup=expand("{tooling}/setup_status/deepmod2.status", tooling=config['tooling_dir']),
+        setup=config['tooling_dir'] + "/" + config['toolConfig']['deepmod2']['install_dir'] + "/" + config['toolConfig']['deepmod2']['executable'],
         pod5=config['pod5dir'] + "/{experiment}_{sr}kHz",
         bam=config['output_dir'] + "/" + "bam/sorted_move_cleansed/{experiment}_{sr}kHz_{acc}_v{ver}.cleansed.bam",
     output: directory(config['output_dir'] + "/" + "tool_out/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.cleansed")
@@ -66,7 +67,6 @@ rule deepmod2_call:
         then
             exec=deepmod2;
         else
-            echo running locally;
             exec="conda run -n {params.conda_env} python {DEEPMOD2}";
         fi;
 
@@ -92,7 +92,7 @@ rule deepmod_rebed_add_ref:
     priority: 0
     params: 
         ref=getRef
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     shell:   ntsh('''
         bed=$(mktemp /tmp/deepmod2_metadata.XXXX);
         sed '1d' {input.bed}/output.per_site | awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$3,$6,$5,$4,$7,$8,$9}}' > $bed;
@@ -105,7 +105,7 @@ rule colsolidate_deepmod2:
     output: config['output_dir'] + "/" + "meta/deepmod2/{experiment}_{sr}kHz_{acc}_v{ver}_{deepmodel}.deepmod2.aggregated.rebed.ref.std.bed"
     threads: 20
     priority: 0
-    conda:  config['default_conda_env']
+    conda: str(workflow.basedir) + "/" + config['default_conda_env']
     log: "log/colsolidate_deepmod2_{deepmodel}/{experiment}_{sr}kHz_{acc}_v{ver}.log"
-    params: script_dir=Path(workflow.basedir) / "scripts_common"
+    params: script_dir=config['scripts_common']
     shell: sh("python {params.script_dir}/deepmod2_consolidate.py {input} {output} {wildcards.deepmodel}")
