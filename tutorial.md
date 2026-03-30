@@ -117,7 +117,7 @@ Creating conda environment
     ```
     ## ensure snakemake is installed 
     snakemake --use-apptainer \
-        ../benchmark_snakemake/snakefile \
+        -s ../benchmark_snakemake/snakefile \
         --cores 10
     ```
 
