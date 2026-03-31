@@ -264,7 +264,7 @@ In this example:
 
     conda activate benchmark_env
     snakemake \
-        -s snakemake_pipelines/snakefile \
+        -s benchmark_snakemake/snakefile \
         --use-conda \
         --cores 10
     ## cores can be set to the max that your machine supports
@@ -274,7 +274,7 @@ In this example:
 
 ```bash
     snakemake \
-        -s snakemake_pipelines/snakefile \
+        -s benchmark_snakemake/snakefile \
         --use-apptainer \
         --apptainer-args "--nv" \
         --cores 10
