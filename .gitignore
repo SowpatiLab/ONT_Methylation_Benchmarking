@@ -7,3 +7,4 @@ example/.nextflow
 example/.nextflow.*
 example/output
 example/tooling
+example/log

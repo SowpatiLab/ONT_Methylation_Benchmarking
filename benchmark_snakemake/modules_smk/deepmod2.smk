@@ -19,27 +19,31 @@ rule setup_deepmod2:
     output: config['tooling_dir'] + "/" + config['toolConfig']['deepmod2']['install_dir'] + "/" + config['toolConfig']['deepmod2']['executable']
     params: 
         conda_env=config['toolConfig']['deepmod2']['conda'],
-        install_dir=config['toolConfig']['deepmod2']['install_dir']
+        install_dir= config['tooling_dir'] + "/" + config['toolConfig']['deepmod2']['install_dir']
     container: None
     shell: """
         source "$(conda info --base)/etc/profile.d/conda.sh"
 
-        [ ! -d {params.install_dir} ] && mkdir {params.install_dir} -p && cd $_
+        [ ! -d {params.install_dir} ] && mkdir {params.install_dir} -p;
+        cd {params.install_dir};
 
-        git clone https://github.com/WGLab/DeepMod2.git .
-        cat deepmod2/src/detect.py \
-            | perl -pe 's/^(from ont_fast5_api.*)/#\$1/' > tmp.txt;
-        cat tmp.txt > deepmod2/src/detect.py;
-        rm  tmp.txt;
+        if [[ -z "$(find . -maxdepth 0 -type d -empty 2>/dev/null)" ]];
+        then
+              echo "deepmod2 git already exists";
+        else
+            git clone https://github.com/WGLab/DeepMod2.git . ;
+            cat src/detect.py \
+                | perl -pe 's/^(from ont_fast5_api.*)/#\$1/' > tmp.txt;
+            cat tmp.txt > src/detect.py;
+            rm  tmp.txt;
+        fi
 
-        conda env create -f deepmod2/environment.yml -n {params.conda_env} -y
-        conda activate {params.conda_env}
+        conda env create -f ./environment.yml -n {params.conda_env} -y;
+        conda activate {params.conda_env};
         
         cuda_version=$(nvidia-smi | grep -oP 'CUDA Version: \\K[\\d.]+' | sed 's/\\.//')
-        echo $cuda_version
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cu${{cuda_version}}
-        cd ../
-        echo deepmod2 dir: $(realpath deepmod2) >> {output}
+        cd -
     """
 
 rule deepmod2_call:
@@ -57,19 +61,10 @@ rule deepmod2_call:
     params: 
         ref=getRef,
         model=inferDeepMod2Model,
-        exec=config['toolConfig']['deepmod2']['executable'],
+        exec=config['tooling_dir'] + "/" + config['toolConfig']['deepmod2']['install_dir'] + "/" + config['toolConfig']['deepmod2']['executable'],
         conda_env=config['toolConfig']['deepmod2']['conda']
     shell:  ntsh("""
-        if  [ -f /.dockerenv ];
-        then
-            exec=deepmod2;
-        elif [ -d "/.singularity.d" ];
-        then
-            exec=deepmod2;
-        else
-            exec="conda run -n {params.conda_env} python {DEEPMOD2}";
-        fi;
-
+        exec="conda run -n {params.conda_env} python {params.exec}";
         {TIME} ${{exec}} detect \
             --bam {input.bam} \
             --input {input.pod5} \

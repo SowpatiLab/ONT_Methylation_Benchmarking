@@ -276,7 +276,7 @@ In this example:
     snakemake \
         -s benchmark_snakemake/snakefile \
         --use-apptainer \
-        --apptainer-args "--nv" \
+        --apptainer-args "--nv " \
         --cores 10
 ```
 
