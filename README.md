@@ -191,6 +191,10 @@ Furthermore an [example](example) directory has been provided with an a sample p
 
 > For a full step-by-step tutorial refer [tutorial.md](tutorial.md).
 
+After the pipeline completes, the output methylBED files generated in the output/meta/ directory can be used as input to the [methylation_metrics.R](benchmark_nextflow/bin/methylation_metrics.R) script, along with the corresponding ground truth methylation BED file obtained from Bisulfite/EMSeq data. Ground truth files can be downloaded from [RODA](https://registry.opendata.aws/ont_basemod_data/). The target motif (e.g. CG, CHG, CHH etc.) must also be provided as a command-line argument to the script. <br>
+> Usage: Rscript methylation_metrics.R \<ont_file.tsv\> \<bis_file.tsv\> \<motif\>
+
+
 ## Contact
 In case of any queries/suggestions, contact
 
