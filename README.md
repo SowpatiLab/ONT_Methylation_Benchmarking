@@ -182,10 +182,10 @@ These are the code snippets that show how the plots used in the preprint were ge
 Once the raw data has been downloaded from [RODA](https://registry.opendata.aws/ont_basemod_data/), these can be processed directly using the workflows we have included in this repo.
 
 ### With Nextflow
-Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow/workflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow readme.md](benchmark_nextflow/readme.md) file.
+Alternatively, a nextflow pipeline has been provided in the [benchmark_nextflow](benchmark_nextflow) directory. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the nextflow workflow are described in the [nextflow readme.md](benchmark_nextflow/readme.md) file.
 
 ### With Snakemake
-A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake/snakefile) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake readme.md](benchmark_snakemake/readme.md) file.
+A snakemake workflow has been provided in the [benchmark_snakemake](benchmark_snakemake) directory. This along with [config.yaml](config.yaml) file can be used to replicate the results of this study. The workflow can be extended to other models provided by dorado by editing the config.yaml. Further details on using the snakemake workflow are described in the [snakemake readme.md](benchmark_snakemake/readme.md) file.
 
 Furthermore an [example](example) directory has been provided with an a sample pod5 file, the use of which is elaborated further in [tutorial.md](tutorial.md).
 
