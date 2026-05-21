@@ -112,7 +112,7 @@ pos_sites <- bis_df_per100 %>%
   summarise(
     Species = unique(species),
     Tool = unique(tool),
-    Context = unique(context.y),
+    Context = unique(context),
     Model = unique(model),
     Sample = unique(sample),
     Count = n(),
@@ -136,7 +136,7 @@ neg_sites <- bis_df_per0 %>%
   summarise(
     Species = unique(species),
     Tool = unique(tool),
-    Context = unique(context.y),
+    Context = unique(context),
     Model = unique(model),
     Sample = unique(sample),
     Count = n(),
